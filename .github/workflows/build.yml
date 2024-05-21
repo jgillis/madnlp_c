@@ -28,7 +28,10 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
-      - run: julia --startup-file=no --project=compiler compiler/build.jl foo
+      - run: |
+              julia --startup-file=no --project=. -e 'using Pkg; Pkg.instantiate()'
+              julia --startup-file=no --project=compiler -e 'using Pkg; Pkg.instantiate()'
+              julia --startup-file=no --project=compiler compiler/build.jl foo
       - uses: actions/upload-artifact@v4.3.1
         with:
           name: foo-${{ matrix.version}}-${{ matrix.os }}-${{ matrix.arch }}

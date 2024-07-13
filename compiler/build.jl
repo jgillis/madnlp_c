@@ -13,6 +13,7 @@ if length(ARGS) < 1 || length(ARGS) > 2
 end
 
 const build_dir = @__DIR__
+const src_dir = realpath(joinpath(build_dir, "..", "src"))
 const target_dir = ARGS[1]
 const project_toml = realpath(joinpath(build_dir, "..", "Project.toml"))
 const version = VersionNumber(TOML.parsefile(project_toml)["version"])
@@ -26,7 +27,7 @@ PackageCompiler.create_library(".", target_dir;
                             incremental=false,
                             force=true,
                             filter_stdlibs=false,
-                            header_files = [joinpath(build_dir, "madnlp_c.h")],
+                            header_files = [joinpath(src_dir, "madnlp_c.h")],
                             version=version,
                             compat_level=compatibility,
                         )

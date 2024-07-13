@@ -18,7 +18,7 @@ jobs:
         os:
           - windows-2022
           - ubuntu-20.04
-          - macos-11
+          #- macos-11
         arch:
           - x64
     steps:
@@ -32,7 +32,21 @@ jobs:
               julia --startup-file=no --project=. -e 'using Pkg; Pkg.instantiate()'
               julia --startup-file=no --project=compiler -e 'using Pkg; Pkg.instantiate()'
               julia --startup-file=no --project=compiler compiler/build.jl foo
+      # Upload as release asset
+      - name: build archives
+        run: |
+          zip -rq foo.zip foo --exclude '.*' --exclude '*/.*' --exclude 'appveyor.yml'
+
+      - name: Upload files to a GitHub release
+        uses: svenstaro/upload-release-action@2.9.0
+        with:
+          overwrite: true
+          tag: v0.1
+          file: foo.zip
+          asset_name: madnlp-jl${{ matrix.version}}-${{ matrix.os }}-${{ matrix.arch }}.zip
+          prerelease: true
+      
       - uses: actions/upload-artifact@v4.3.1
         with:
-          name: foo-${{ matrix.version}}-${{ matrix.os }}-${{ matrix.arch }}
+          name: madnlp-jl${{ matrix.version}}-${{ matrix.os }}-${{ matrix.arch }}
           path: foo

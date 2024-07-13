@@ -55,7 +55,7 @@ mutable struct MadnlpCInterface
     eval_lag_hess::Ptr{Cvoid}
   
     nw::Int64
-    nc::Int64    
+    nc::Int64
 
     nzj_i::Ptr{Int64}
     nzj_j::Ptr{Int64}
@@ -76,10 +76,11 @@ mutable struct MadnlpCNumericIn{T}
     ubx::T
     lbg::T
     ubg::T
-
     # No-argument constructor
     MadnlpCNumericIn{T}() where T = new{T}()
+    MadnlpCNumericIn{T}(x0,l0,lbx,ubx,lbg,ubg) where {T} = new(x0,l0,lbx,ubx,lbg,ubg)
 end
+MadnlpCNumericIn(x0::T,l0::T,lbx::T,ubx::T,lbg::T,ubg::T) where {T} = MadnlpCNumericIn{T}(x0,l0,lbx,ubx,lbg,ubg);
 
 mutable struct MadnlpCNumericOut
     sol::Ptr{Cdouble}
@@ -100,7 +101,7 @@ mutable struct MadnlpCSolver
     res::MadNLP.MadNLPExecutionStats{Float64, Vector{Float64}}
     in_c::MadnlpCNumericIn{Ptr{Cdouble}}
     out_c::MadnlpCNumericOut
-    in::MadnlpCNumericIn{Vector{Float64}}
+    # in::MadnlpCNumericIn{Vector{Float64}}
     MadnlpCSolver() = new()
 end
 
@@ -294,25 +295,25 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
 
     interf = solver.nlp_interface
 
-    solver.in = MadnlpCNumericIn{Vector{Float64}}()
+    # solver.in = MadnlpCNumericIn{Vector{Float64}}()
 
     @info "nw" interf.nw
     @info "nc" interf.nc
 
-    solver.in.x0 = fill(0.0, interf.nw)
-    solver.in.l0 = fill(0.0, interf.nc)
-    solver.in.lbx = fill(-Inf, interf.nw)
-    solver.in.ubx = fill(Inf, interf.nw)
-    solver.in.lbg = fill(0.0, interf.nc)
-    solver.in.ubg = fill(0.0, interf.nc)
+    x0_default = fill(0.0, interf.nw)
+    l0_default = fill(0.0, interf.nc)
+    lbx_default = fill(-Inf, interf.nw)
+    ubx_default = fill(Inf, interf.nw)
+    lbg_default = fill(0.0, interf.nc)
+    ubg_default = fill(0.0, interf.nc)
 
     solver.in_c = MadnlpCNumericIn{Ptr{Cdouble}}()
-    solver.in_c.x0 = Base.unsafe_convert(Ptr{Cdouble},solver.in.x0)
-    solver.in_c.l0 = Base.unsafe_convert(Ptr{Cdouble},solver.in.l0)
-    solver.in_c.lbx = Base.unsafe_convert(Ptr{Cdouble},solver.in.lbx)
-    solver.in_c.ubx = Base.unsafe_convert(Ptr{Cdouble},solver.in.ubx)
-    solver.in_c.lbg = Base.unsafe_convert(Ptr{Cdouble},solver.in.lbg)
-    solver.in_c.ubg = Base.unsafe_convert(Ptr{Cdouble},solver.in.ubg)
+    solver.in_c.x0 = Base.unsafe_convert(Ptr{Cdouble},  x0_default)
+    solver.in_c.l0 = Base.unsafe_convert(Ptr{Cdouble},  l0_default)
+    solver.in_c.lbx = Base.unsafe_convert(Ptr{Cdouble},lbx_default)
+    solver.in_c.ubx = Base.unsafe_convert(Ptr{Cdouble},ubx_default)
+    solver.in_c.lbg = Base.unsafe_convert(Ptr{Cdouble},lbg_default)
+    solver.in_c.ubg = Base.unsafe_convert(Ptr{Cdouble},ubg_default)
 
     solver.out_c = MadnlpCNumericOut()
 
@@ -405,15 +406,15 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
     nlp_interface = solver.nlp_interface
     nvar = nlp_interface.nw
     ncon = nlp_interface.nc
-    
-    in = solver.in
 
-    x0 = in.x0
-    y0 = in.l0
-    lvar = in.lbx
-    uvar = in.ubx
-    lcon = in.lbg
-    ucon = in.ubg
+    in_c = solver.in_c
+
+    x0 = unsafe_wrap(Array, in_c.x0, (nlp_interface.nw,))
+    y0 = unsafe_wrap(Array, in_c.l0, (nlp_interface.nc,))
+    lvar = unsafe_wrap(Array, in_c.lbx, (nlp_interface.nw,))
+    uvar = unsafe_wrap(Array, in_c.ubx, (nlp_interface.nw,))
+    lcon = unsafe_wrap(Array, in_c.lbg, (nlp_interface.nc,))
+    ucon = unsafe_wrap(Array, in_c.ubg, (nlp_interface.nc,))
 
     # default values
     main_log_level = Logging.Warn
@@ -444,19 +445,13 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
 
     GPU_DEVICE::Bool = false
 
-    stuff = in.lbx
-
-    @info "in lbx" stuff
-
-    stuff2 = nlp_interface.nzj_i
-    @info "nzj_i" stuff2
-    @info "length" nlp_interface.nnzj
-
     nzj_i = unsafe_wrap(Array, nlp_interface.nzj_i, (nlp_interface.nnzj,))
     nzj_j = unsafe_wrap(Array, nlp_interface.nzj_j, (nlp_interface.nnzj,))
     nzh_i = unsafe_wrap(Array, nlp_interface.nzh_i, (nlp_interface.nnzh,))
     nzh_j = unsafe_wrap(Array, nlp_interface.nzh_j, (nlp_interface.nnzh,))
 
+    @info "nzj_i" nzh_j
+    @info "length" nlp_interface.nnzj
     @info "x0 julia" x0
     @info "lvar julia" lvar
 
@@ -494,10 +489,10 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
         Guvar = CuArray{Float64}(undef, nvar)
         Glcon = CuArray{Float64}(undef, ncon)
         Gucon = CuArray{Float64}(undef, ncon)
-        Gnzj_i = CuArray{UInt64}(undef, nnzj)
-        Gnzj_j = CuArray{UInt64}(undef, nnzj)
-        Gnzh_i = CuArray{UInt64}(undef, nnzh)
-        Gnzh_j = CuArray{UInt64}(undef, nnzh)
+        Gnzj_i = CuArray{Int64}(undef, nnzj)
+        Gnzj_j = CuArray{Int64}(undef, nnzj)
+        Gnzh_i = CuArray{Int64}(undef, nnzh)
+        Gnzh_j = CuArray{Int64}(undef, nnzh)
 
         copyto!(Gx0, x0)
         copyto!(Gy0, y0)
@@ -583,7 +578,6 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
     solver.out_c.mul_U = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_U)
 
     return 0
-
 end
 
 

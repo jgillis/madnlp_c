@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 
-#define madnlp_int int
+#define madnlp_int long
 #define madnlp_real double
 
 // structs
@@ -35,11 +35,11 @@ struct MadnlpCInterface;
 typedef struct MadnlpCSolver MadnlpCSolver;
 
 // function pointer types
-typedef madnlp_int (*MadnlpCEvalObj)(const double*, double *, void*);
-typedef madnlp_int (*MadnlpCEvalConstr)(const double*, double *, void*);
-typedef madnlp_int (*MadnlpCEvalObjGrad)(const double*, double*, void*);
-typedef madnlp_int (*MadnlpCEvalConstrJac)(const double*, double*, void*);
-typedef madnlp_int (*MadnlpCEvalLagHess)(double, const double*, const double*, double*, void*);
+typedef int (*MadnlpCEvalObj)(const double*, double *, void*);
+typedef int (*MadnlpCEvalConstr)(const double*, double *, void*);
+typedef int (*MadnlpCEvalObjGrad)(const double*, double*, void*);
+typedef int (*MadnlpCEvalConstrJac)(const double*, double*, void*);
+typedef int (*MadnlpCEvalLagHess)(double, const double*, const double*, double*, void*);
 
 struct MadnlpCStats {
   madnlp_int iter;

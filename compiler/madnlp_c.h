@@ -53,43 +53,44 @@ struct MadnlpCInterface {
   MadnlpCEvalLagHess eval_lag_hess;
 
   /// @brief number of variables
-  size_t nw;
+  madnlp_int nw;
   /// @brief number of equality constraints
-  size_t nc;
+  madnlp_int nc;
 
-  size_t* nzj_i; // 1-based
-  size_t* nzj_j;
-  size_t* nzh_i;
-  size_t* nzh_j;
+  madnlp_int* nzj_i; // 1-based
+  madnlp_int* nzj_j;
+  madnlp_int* nzh_i;
+  madnlp_int* nzh_j;
 
-  size_t nnzj;
-  size_t nnzh;
-  size_t nnzo;
+  madnlp_int nnzj;
+  madnlp_int nnzh;
+  madnlp_int nnzo;
 
   void* user_data;
 };
 
 struct MadnlpCNumericIn {
-  const double* x0;
-  const double* l0;
-  const double* ubx;
-  const double* lbx;
-  const double* ubg;
-  const double* lbg;
+  double* x0;
+  double* l0;
+  double* lbx;
+  double* ubx;
+  double* lbg;
+  double* ubg;
 };
 
 struct MadnlpCNumericOut {
-  double* sol;
-  double* con;
-  double* obj;
-  double* mul;
-  double* mul_L;
-  double* mul_U;
-
+  const double* sol;
+  const double* con;
+  const double* obj;
+  const double* mul;
+  const double* mul_L;
+  const double* mul_U;
 };
 
 MADNLP_SYMBOL_EXPORT struct MadnlpCSolver* madnlp_c_create(struct MadnlpCInterface* nlp_interface);
-MADNLP_SYMBOL_EXPORT madnlp_int madnlp_c_solve(struct MadnlpCSolver*, struct MadnlpCNumericIn* in, struct MadnlpCNumericOut* out);
+MADNLP_SYMBOL_EXPORT const struct MadnlpCNumericIn* madnlp_c_input(struct MadnlpCSolver*);
+MADNLP_SYMBOL_EXPORT const struct MadnlpCNumericOut* madnlp_c_output(struct MadnlpCSolver*);
+MADNLP_SYMBOL_EXPORT madnlp_int madnlp_c_solve(struct MadnlpCSolver*);
 
 /* -1 for not found, 0 for double, 1 for int, 2 for bool, 3 for string */
 MADNLP_SYMBOL_EXPORT int madnlp_c_option_type(const char* name);

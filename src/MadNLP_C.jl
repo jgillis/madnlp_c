@@ -19,7 +19,7 @@ using MadNLPGPU
 using CUDA
 using UnsafePointers
 
-export MadnlpCSolver, MadnlpCInterface, MadnlpCNumericIn, MadnlpCNumericOut, madnlp_c_get_stats, madnlp_c_startup, madnlp_c_shutdown, madnlp_c_create, madnlp_c_option_type, madnlp_c_set_option_double, madnlp_c_set_option_bool, madnlp_c_set_option_int, madnlp_c_set_option_string, madnlp_c_solve, madnlp_c_destroy
+export MadnlpCSolver, MadnlpCInterface, MadnlpCNumericIn, MadnlpCNumericOut, madnlp_c_get_stats, madnlp_c_startup, madnlp_c_shutdown, madnlp_c_create, madnlp_c_option_type, madnlp_c_set_option_double, madnlp_c_set_option_bool, madnlp_c_set_option_int, madnlp_c_set_option_string, madnlp_c_input, madnlp_c_output, madnlp_c_solve, madnlp_c_destroy
 
 struct CPUBuffers
 	x::Vector{Float64}
@@ -53,43 +53,32 @@ mutable struct MadnlpCInterface
     eval_obj_grad::Ptr{Cvoid}
     eval_constr_jac::Ptr{Cvoid}
     eval_lag_hess::Ptr{Cvoid}
+  
+    nw::Int64
+    nc::Int64    
 
-    nw::Csize_t
-    nc::Csize_t
+    nzj_i::Ptr{Int64}
+    nzj_j::Ptr{Int64}
+    nzh_i::Ptr{Int64}
+    nzh_j::Ptr{Int64}
 
-    nzj_i::Ptr{Csize_t}
-    nzj_j::Ptr{Csize_t}
-    nzh_i::Ptr{Csize_t}
-    nzh_j::Ptr{Csize_t}
-
-    nnzj::Csize_t
-    nnzh::Csize_t
-    nnzo::Csize_t
-
+    nnzj::Int64
+    nnzh::Int64
+    nnzo::Int64
+  
     user_data::Ptr{Cvoid}
 end
 
-mutable struct MadnlpCSolver
-    nlp_interface::MadnlpCInterface
-    lin_solver_id::Int64
-    max_iters::Int64
-    print_level::Int64
-    minimize::Bool
-    res::MadNLP.MadNLPExecutionStats{Float64, Vector{Float64}}
-    MadnlpCSolver() = new()
-end
+mutable struct MadnlpCNumericIn{T}
+    x0::T
+    l0::T
+    lbx::T
+    ubx::T
+    lbg::T
+    ubg::T
 
-struct MadnlpCStats
-    iter::Int64
-end
-
-mutable struct MadnlpCNumericIn
-    x0::Ptr{Cdouble}
-    l0::Ptr{Cdouble}
-    lbx::Ptr{Cdouble}
-    ubx::Ptr{Cdouble}
-    lbg::Ptr{Cdouble}
-    ubg::Ptr{Cdouble}
+    # No-argument constructor
+    MadnlpCNumericIn{T}() where T = new{T}()
 end
 
 mutable struct MadnlpCNumericOut
@@ -100,6 +89,23 @@ mutable struct MadnlpCNumericOut
     mul_L::Ptr{Cdouble}
     mul_U::Ptr{Cdouble}
     MadnlpCNumericOut() = new()
+end
+
+mutable struct MadnlpCSolver
+    nlp_interface::MadnlpCInterface
+    lin_solver_id::Int64
+    max_iters::Int64
+    print_level::Int64
+    minimize::Bool
+    res::MadNLP.MadNLPExecutionStats{Float64, Vector{Float64}}
+    in_c::MadnlpCNumericIn{Ptr{Cdouble}}
+    out_c::MadnlpCNumericOut
+    in::MadnlpCNumericIn{Vector{Float64}}
+    MadnlpCSolver() = new()
+end
+
+struct MadnlpCStats
+    iter::Int64
 end
 
 function NLPModels.jac_structure!(nlp::GenericModel, I::AbstractVector{T}, J::AbstractVector{T}) where T
@@ -286,11 +292,47 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
     solver.print_level = 5
     solver.minimize = true
 
+    interf = solver.nlp_interface
+
+    solver.in = MadnlpCNumericIn{Vector{Float64}}()
+
+    @info "nw" interf.nw
+    @info "nc" interf.nc
+
+    solver.in.x0 = fill(0.0, interf.nw)
+    solver.in.l0 = fill(0.0, interf.nc)
+    solver.in.lbx = fill(-Inf, interf.nw)
+    solver.in.ubx = fill(Inf, interf.nw)
+    solver.in.lbg = fill(0.0, interf.nc)
+    solver.in.ubg = fill(0.0, interf.nc)
+
+    solver.in_c = MadnlpCNumericIn{Ptr{Cdouble}}()
+    solver.in_c.x0 = Base.unsafe_convert(Ptr{Cdouble},solver.in.x0)
+    solver.in_c.l0 = Base.unsafe_convert(Ptr{Cdouble},solver.in.l0)
+    solver.in_c.lbx = Base.unsafe_convert(Ptr{Cdouble},solver.in.lbx)
+    solver.in_c.ubx = Base.unsafe_convert(Ptr{Cdouble},solver.in.ubx)
+    solver.in_c.lbg = Base.unsafe_convert(Ptr{Cdouble},solver.in.lbg)
+    solver.in_c.ubg = Base.unsafe_convert(Ptr{Cdouble},solver.in.ubg)
+
+    solver.out_c = MadnlpCNumericOut()
+
     # Copy the solver object to the allocated memory
     unsafe_store!(solver_ptr, solver)
 
     # Return the pointer to the solver object
     return solver_ptr
+end
+
+Base.@ccallable function madnlp_c_input(s::Ptr{MadnlpCSolver})::Ptr{MadnlpCNumericIn{Ptr{Cdouble}}}
+    solver = unsafe_load(s)
+
+    return Base.unsafe_convert(Ptr{MadnlpCNumericIn{Ptr{Cdouble}}},Ref(solver.in_c))
+end
+
+Base.@ccallable function madnlp_c_output(s::Ptr{MadnlpCSolver})::Ptr{MadnlpCNumericOut}
+    solver = unsafe_load(s)
+
+    return Base.unsafe_convert(Ptr{MadnlpCNumericOut},Ref(solver.out_c))
 end
 
 Base.@ccallable function madnlp_c_option_type(name::Ptr{Cchar})::Cint
@@ -356,17 +398,22 @@ Base.@ccallable function madnlp_c_get_stats(s::Ptr{MadnlpCSolver})::Ptr{MadnlpCS
     return 0
 end
 
-Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver},in::Ptr{MadnlpCNumericIn},out::Ptr{MadnlpCNumericOut})::Cint
+
+Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
 
     solver = unsafe_load(s)
     nlp_interface = solver.nlp_interface
     nvar = nlp_interface.nw
     ncon = nlp_interface.nc
+    
+    in = solver.in
 
-    out_backup = out
-
-    in = unsafe_load(in)
-    out = UnsafePtr(out)
+    x0 = in.x0
+    y0 = in.l0
+    lvar = in.lbx
+    uvar = in.ubx
+    lcon = in.lbg
+    ucon = in.ubg
 
     # default values
     main_log_level = Logging.Warn
@@ -401,12 +448,9 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver},in::Ptr{MadnlpCNum
 
     @info "in lbx" stuff
 
-    x0 = unsafe_wrap(Array, in.x0, (nvar,))
-    y0 = unsafe_wrap(Array, in.l0, (ncon,))
-    lvar = unsafe_wrap(Array, in.lbx, (nvar,))
-    uvar = unsafe_wrap(Array, in.ubx, (nvar,))
-    lcon = unsafe_wrap(Array, in.lbg, (ncon,))
-    ucon = unsafe_wrap(Array, in.ubg, (ncon,))
+    stuff2 = nlp_interface.nzj_i
+    @info "nzj_i" stuff2
+    @info "length" nlp_interface.nnzj
 
     nzj_i = unsafe_wrap(Array, nlp_interface.nzj_i, (nlp_interface.nnzj,))
     nzj_j = unsafe_wrap(Array, nlp_interface.nzj_j, (nlp_interface.nnzj,))
@@ -487,29 +531,31 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver},in::Ptr{MadnlpCNum
         )
     end
 
-    @info "x0" x0
+    @info "x0" x0 
     @info "y0" y0
     @info "lvar" lvar
     @info "uvar" uvar
     @info "lcon" lcon
     @info "ucon" ucon
 
+    meta = NLPModelMeta(
+        nvar,
+        ncon = ncon,
+        nnzo = nlp_interface.nnzo,
+        nnzj = nlp_interface.nnzj,
+        nnzh = nlp_interface.nnzh,
+        x0 = x0,
+        y0 = y0,
+        lvar = lvar,
+        uvar = uvar,
+        lcon = lcon,
+        ucon = ucon,
+        name = "Generic",
+        minimize = solver.minimize
+    )
+
     nlp = GenericModel(
-        NLPModelMeta(
-            Int64(nvar),
-            ncon = Int64(ncon),
-            nnzo = nlp_interface.nnzo,
-            nnzj = nlp_interface.nnzj,
-            nnzh = nlp_interface.nnzh,
-            x0 = x0,
-            y0 = y0,
-            lvar = lvar,
-            uvar = uvar,
-            lcon = lcon,
-            ucon = ucon,
-            name = "Generic",
-            minimize = solver.minimize
-        ),
+        meta,
         Counters(),
         buffers,
         Vector{Float64}(undef, 1),
@@ -529,12 +575,12 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver},in::Ptr{MadnlpCNum
     solver.res = MadNLP.solve!(madnlp_solver, max_iter = Int(solver.max_iters))
 
     # Make results available to C
-    out.sol[] = Base.unsafe_convert(Ptr{Cdouble},solver.res.solution)
-    out.obj[] = Base.unsafe_convert(Ptr{Cdouble},Ref(solver.res.objective))
-    out.con[] = Base.unsafe_convert(Ptr{Cdouble},solver.res.constraints)
-    out.mul[] = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers)
-    out.mul_L[] = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_L)
-    out.mul_U[] = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_U)
+    solver.out_c.sol = Base.unsafe_convert(Ptr{Cdouble},solver.res.solution)
+    solver.out_c.obj = Base.unsafe_convert(Ptr{Cdouble},Ref(solver.res.objective))
+    solver.out_c.con = Base.unsafe_convert(Ptr{Cdouble},solver.res.constraints)
+    solver.out_c.mul = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers)
+    solver.out_c.mul_L = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_L)
+    solver.out_c.mul_U = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_U)
 
     return 0
 

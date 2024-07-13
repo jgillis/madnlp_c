@@ -33,10 +33,12 @@ jobs:
               julia --startup-file=no --project=compiler -e 'using Pkg; Pkg.instantiate()'
               julia --startup-file=no --project=compiler compiler/build.jl foo
       # Upload as release asset
-      - name: build archives
-        run: |
-          zip -rq foo.zip foo --exclude '.*' --exclude '*/.*' --exclude 'appveyor.yml'
-
+      - uses: vimtor/action-zip@v1.1
+        with:
+          files: foo/
+          recursive: true
+          dest: foo.zip
+          
       - name: Upload files to a GitHub release
         uses: svenstaro/upload-release-action@2.9.0
         with:

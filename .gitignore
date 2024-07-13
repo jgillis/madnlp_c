@@ -1,1 +1,3 @@
 build/
+.ccls-cache
+.*.sw[a-z]

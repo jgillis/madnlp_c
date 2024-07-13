@@ -84,7 +84,9 @@ int main(int argc, char** argv) {
 
   struct MadnlpCSolver* solver = madnlp_c_create(&interf);
 
-  //madnlp_c_set_option_int(solver, "max_iter", 5);
+  madnlp_c_set_option_int(solver, "max_iter", 5);
+  madnlp_c_set_option_int(solver, "print_level", 2);
+  madnlp_c_set_option_int(solver, "lin_solver_id", 1);
 
   const MadnlpCNumericIn* in = madnlp_c_input(solver);
   std::copy(x0,x0+2,in->x0);
@@ -99,11 +101,14 @@ int main(int argc, char** argv) {
 
   double sol[2];
   double cons[1];
+  double obj[1];
   std::copy(out->sol,out->sol+2,sol);
-  std::copy(out->sol,out->sol+1,cons);
+  std::copy(out->con,out->con+1,cons);
+  std::copy(out->obj,out->obj+1,obj);
 
-  std::cout << sol[0] << std::endl;
-  std::cout << sol[1] << std::endl;
+  std::cout << "sol: " << sol[0] << ", " << sol[1] << std::endl;
+  std::cout << "obj: " << obj[1] << std::endl;
+  std::cout << "con: " << con[1] << std::endl;
 
   shutdown_julia(0);
 

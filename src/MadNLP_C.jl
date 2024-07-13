@@ -260,17 +260,24 @@ end
 
 
 function set_option(s::Ptr{MadnlpCSolver}, name::String, value::Any)
+		s_jl::MadnlpCSolver = unsafe_load(s)
     if name == "print_level"
-        s.print_level = Int(value)
-        if s.print_level > 5 s.print_level = 5 end
-        if s.print_level < 0 s.print_level = 0 end
+        if value > 5 value = 5 end
+        if value < 0 value = 0 end
+        s_jl.print_level = Int(value)
     elseif name == "lin_solver_id"
-        s.lin_solver_id = Int(value)
-        if s.lin_solver_id > 5 s.lin_solver_id = 5 end
-        if s.lin_solver_id < 0 s.lin_solver_id = 0 end
+        if value > 5 value = 5 end
+        if value < 0 value = 0 end
+        s_jl.lin_solver_id = Int(value)
+    elseif name == "max_iters"
+        if value < 0 value = 0 end
+        s_jl.max_iters = Int(value)
+    elseif name == "minimize"
+        s_jl.minimize = Bool(value)
     else
         @warn "Unknown option $name"
     end
+		unsafe_store!(s, s_jl)
 end
 
 Base.@ccallable function madnlp_c_startup(argc::Cint, argv::Ptr{Ptr{Cchar}})::Cvoid
@@ -338,24 +345,11 @@ end
 
 Base.@ccallable function madnlp_c_option_type(name::Ptr{Cchar})::Cint
     n = unsafe_string(name)
-    if n == "acceptable_tol" return 0 end
-    if n == "bound_frac" return 0 end
-    if n == "bound_push" return 0 end
-    if n == "bound_relax_factor" return 0 end
-    if n == "constr_viol_tol" return 0 end
-    if n == "lammax" return 0 end
-    if n == "mu_init" return 0 end
-    if n == "recalc_y_feas_tol" return 0 end
     if n == "tol" return 0 end
-    if n == "warm_start_mult_bound_push" return 0 end
-    if n == "acceptable_iter" return 1 end
     if n == "max_iter" return 1 end
     if n == "print_level" return 1 end
     if n == "lin_solver_id" return 1 end
-    if n == "iterative_refinement" return 2 end
-    if n == "ls_scaling" return 2 end
-    if n == "recalc_y" return 2 end
-    if n == "warm_start_init_point" return 2 end
+    if n == "minimize" return 2 end
     return -1
 end
 
@@ -368,7 +362,7 @@ Base.@ccallable function madnlp_c_set_option_double(s::Ptr{MadnlpCSolver}, name:
     return 0
 end
 
-Base.@ccallable function madnlp_c_set_option_bool(s::Ptr{MadnlpCSolver}, name::Ptr{Cchar}, val::Cint)::Cint
+Base.@ccallable function madnlp_c_set_option_bool(s::Ptr{MadnlpCSolver}, name::Ptr{Cchar}, val::Bool)::Cint
     try
         set_option(s, unsafe_string(name), Bool(val))
     catch e
@@ -377,7 +371,7 @@ Base.@ccallable function madnlp_c_set_option_bool(s::Ptr{MadnlpCSolver}, name::P
     return 0
 end
 
-Base.@ccallable function madnlp_c_set_option_int(s::Ptr{MadnlpCSolver}, name::Ptr{Cchar}, val::Cint)::Cint
+Base.@ccallable function madnlp_c_set_option_int(s::Ptr{MadnlpCSolver}, name::Ptr{Cchar}, val::Clong)::Cint
     try
         set_option(s, unsafe_string(name), val)
     catch e
@@ -420,22 +414,22 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
     main_log_level = Logging.Warn
     madnlp_log = MadNLP.NOTICE
 
-    if solver.print_level == 1
+    if solver.print_level == 0
         main_log_level = Logging.Error
         madnlp_log = MadNLP.ERROR
-    elseif solver.print_level == 2
+    elseif solver.print_level == 1
         main_log_level = Logging.Warn
         madnlp_log = MadNLP.WARN
-    elseif solver.print_level == 3
+    elseif solver.print_level == 2
         main_log_level = Logging.Warn
         madnlp_log = MadNLP.NOTICE
-    elseif solver.print_level == 4
+    elseif solver.print_level == 3
         main_log_level = Logging.Info
         madnlp_log = MadNLP.INFO
-    elseif solver.print_level == 5
+    elseif solver.print_level == 4
         main_log_level = Logging.Debug
         madnlp_log = MadNLP.DEBUG
-    elseif solver.print_level == 6
+    elseif solver.print_level == 5
         main_log_level = Logging.Debug
         madnlp_log = MadNLP.TRACE
     end
@@ -578,6 +572,7 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
     solver.out_c.mul_U = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_U)
 
     return 0
+
 end
 
 

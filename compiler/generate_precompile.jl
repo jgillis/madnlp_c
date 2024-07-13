@@ -1,5 +1,5 @@
 using MadNLP_C
-using Base
+using Base: unsafe_convert
 using Logging
 
 logger = ConsoleLogger(stderr, Logging.Warn)
@@ -55,7 +55,7 @@ function eval_grad_f(Cw::Ptr{Cdouble},Cgrad::Ptr{Cdouble}, d::Ptr{Cvoid})::Cint
 	grad::Vector{Float64} = unsafe_wrap(Array, Cgrad, nnzo)
   _eval_grad_f!(w,grad)
 	@debug "grad-callback" grad
-	# Cgrad::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, grad)
+	# Cgrad::Ptr{Cdouble} = unsafe_convert(Ptr{Cdouble}, grad)
 	return 0
 end
 
@@ -140,10 +140,8 @@ lin_solver_names = Dict(
 	4=>"LapackGPUSolver",
 	5=>"CuCholeskySolver",
 )
-cases::Vector{Pair{UInt64,Csize_t}} = [0=>3]
-# cases::Vector{Pair{UInt64,Csize_t}} = [0=>3,1=>3,5=>3,3=>0]
-for (lin_solver_id,print_level) in cases
-
+cases::Vector{Tuple{Int,Int,Int}} = [(0,3,3),(2,2,1000),(1,1,1000),(0,0,1000)]
+for (lin_solver_id,print_level, max_iters) in cases
 	nlp_interface = MadnlpCInterface(
 		@cfunction(eval_f,Cint,(Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid})),
 		@cfunction(eval_g,Cint,(Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid})),
@@ -162,7 +160,7 @@ for (lin_solver_id,print_level) in cases
 		user_data
 	)
 
-	s = madnlp_c_create(Base.unsafe_convert(Ptr{MadnlpCInterface}, pointer_from_objref(nlp_interface)))
+	s = madnlp_c_create(unsafe_convert(Ptr{MadnlpCInterface}, pointer_from_objref(nlp_interface)))
 
 	inp = MadnlpCNumericIn(Cx0,Cy0,Clbx,Cubx,Clbg,Cubg)
 	# inp = MadnlpCNumericIn{Ptr{typeof(Cx0)}}()
@@ -179,16 +177,16 @@ for (lin_solver_id,print_level) in cases
 	s_jl::MadnlpCSolver = unsafe_load(s)
 	s_jl.in_c = inp
 	s_jl.out_c = out
-	s = Base.unsafe_convert(Ptr{MadnlpCSolver}, pointer_from_objref(s_jl))
+	# s = unsafe_convert(Ptr{MadnlpCSolver}, pointer_from_objref(s_jl))
+	unsafe_store!(s, s_jl)
 
   test_x0 = unsafe_wrap(Array, inp.x0, (nvar,))
 	@info test_x0
-
-	#madnlp_c_set_option_int(s, "lin_solver_id", lin_solver_id)
-	#madnlp_c_set_option_int(s, "max_iters", max_iters)
-	#madnlp_c_set_option_int(s, "print_level", print_level)
-	#madnlp_c_set_option_bool(s, "minimize", minimize)
-	#
+	
+	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"lin_solver_id"), lin_solver_id)
+	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"max_iters"), max_iters)
+	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"print_level"), print_level)
+	madnlp_c_set_option_bool(s, unsafe_convert(Ptr{Int8},"minimize"), minimize)
 
 	Cret = madnlp_c_solve(s)
 					# Base.unsafe_convert(Ptr{MadnlpCNumericIn}, pointer_from_objref(inp)),

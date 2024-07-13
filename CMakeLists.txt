@@ -36,7 +36,7 @@ add_custom_command(
 )
 
 add_custom_command(
-  OUTPUT ${PROJECT_BINARY_DIR}/${MADNLP_C_FULLNAME}
+  OUTPUT ${PROJECT_BINARY_DIR}/${MADNLP_C_FULLNAME}/lib/libmadnlp_c.so
   DEPENDS ${PROJECT_BINARY_DIR}/PackageCompiler_env_status.txt
   COMMAND ${Julia_EXECUTABLE} --startup-file=no --project=compiler ${BUILD_SCRIPT} ${PROJECT_BINARY_DIR}/${MADNLP_C_FULLNAME}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -44,5 +44,5 @@ add_custom_command(
 )
 
 add_custom_target(madnlp_c ALL
-  DEPENDS ${PROJECT_BINARY_DIR}/${MADNLP_C_FULLNAME}
+  DEPENDS ${PROJECT_BINARY_DIR}/${MADNLP_C_FULLNAME}/lib/libmadnlp_c.so
 )

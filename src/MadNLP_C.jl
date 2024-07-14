@@ -383,7 +383,7 @@ Base.@ccallable function madnlp_c_set_option_bool(s::Ptr{MadnlpCSolver}, name::P
   return 0
 end
 
-Base.@ccallable function madnlp_c_set_option_int(s::Ptr{MadnlpCSolver}, name::Ptr{Cchar}, val::Clong)::Cint
+Base.@ccallable function madnlp_c_set_option_int(s::Ptr{MadnlpCSolver}, name::Ptr{Cchar}, val::Int64)::Cint
   try
     set_option(s, unsafe_string(name), val)
   catch e

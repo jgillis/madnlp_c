@@ -74,18 +74,18 @@ function eval_h(obj_scale::Cdouble, Cw::Ptr{Cdouble}, Cl::Ptr{Cdouble}, Chess::P
 	return 0
 end
 
-nnzo::Csize_t = 2
-nnzj::Csize_t = 2
-nnzh::Csize_t = 3
+nnzo::Int64 = 2
+nnzj::Int64 = 2
+nnzh::Int64 = 3
 
-nzj_i = Csize_t[1,1]
-nzj_j = Csize_t[1,2]
-nzh_i = Csize_t[1,1,2]
-nzh_j = Csize_t[1,2,2]
-Cnzj_i::Ptr{Csize_t} = pointer(nzj_i)
-Cnzj_j::Ptr{Csize_t} = pointer(nzj_j)
-Cnzh_i::Ptr{Csize_t} = pointer(nzh_i)
-Cnzh_j::Ptr{Csize_t} = pointer(nzh_j)
+nzj_i = Int64[1,1]
+nzj_j = Int64[1,2]
+nzh_i = Int64[1,1,2]
+nzh_j = Int64[1,2,2]
+Cnzj_i::Ptr{Int64} = pointer(nzj_i)
+Cnzj_j::Ptr{Int64} = pointer(nzj_j)
+Cnzh_i::Ptr{Int64} = pointer(nzh_i)
+Cnzh_j::Ptr{Int64} = pointer(nzh_j)
 
 x0::Vector{Float64} = [1.0, 1.0]
 y0::Vector{Float64} = [1.0]
@@ -94,8 +94,8 @@ ubx::Vector{Float64} = [ Inf,  Inf]
 lbg::Vector{Float64} = [0.0]
 ubg::Vector{Float64} = [0.0]
 
-max_iters::Csize_t = 1000
-print_level::Csize_t = 3
+max_iters::Int64 = 1000
+print_level::Int64 = 3
 minimize::Bool = true
 user_data::Ptr{Cvoid} = 0
 

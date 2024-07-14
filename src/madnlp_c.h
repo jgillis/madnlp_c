@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 
-#define madnlp_int long
+#define madnlp_int long long int
 #define madnlp_real double
 
 // structs
@@ -100,7 +100,7 @@ MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_bool(struct MadnlpCSolver* s, const
 MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_int(struct MadnlpCSolver* s, const char* name, madnlp_int val);
 MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_string(struct MadnlpCSolver* s, const char* name, const char* val);
 
-MADNLP_SYMBOL_EXPORT madnlp_int madnlp_c_solve(struct MadnlpCSolver*);
+MADNLP_SYMBOL_EXPORT int madnlp_c_solve(struct MadnlpCSolver*);
 
 MADNLP_SYMBOL_EXPORT const struct MadnlpCNumericOut* madnlp_c_output(struct MadnlpCSolver*);
 MADNLP_SYMBOL_EXPORT const struct MadnlpCStats* madnlp_c_get_stats(struct MadnlpCSolver* s);

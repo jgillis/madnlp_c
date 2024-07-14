@@ -89,6 +89,9 @@ mutable struct MadnlpCNumericOut
     mul::Ptr{Cdouble}
     mul_L::Ptr{Cdouble}
     mul_U::Ptr{Cdouble}
+    iter::Ptr{Int64}
+    primal_feas::Ptr{Cdouble}
+    dual_feas::Ptr{Cdouble}
     MadnlpCNumericOut() = new()
 end
 
@@ -101,7 +104,7 @@ mutable struct MadnlpCSolver
     res::MadNLP.MadNLPExecutionStats{Float64, Vector{Float64}}
     in_c::MadnlpCNumericIn{Ptr{Cdouble}}
     out_c::MadnlpCNumericOut
-    # in::MadnlpCNumericIn{Vector{Float64}}
+		in::MadnlpCNumericIn{Vector{Float64}}
     MadnlpCSolver() = new()
 end
 
@@ -302,25 +305,25 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
 
     interf = solver.nlp_interface
 
-    # solver.in = MadnlpCNumericIn{Vector{Float64}}()
+    solver.in = MadnlpCNumericIn{Vector{Float64}}()
 
     @info "nw" interf.nw
     @info "nc" interf.nc
 
-    x0_default = fill(0.0, interf.nw)
-    l0_default = fill(0.0, interf.nc)
-    lbx_default = fill(-Inf, interf.nw)
-    ubx_default = fill(Inf, interf.nw)
-    lbg_default = fill(0.0, interf.nc)
-    ubg_default = fill(0.0, interf.nc)
+    solver.in.x0 = fill(0.0, interf.nw)
+    solver.in.l0 = fill(0.0, interf.nc)
+    solver.in.lbx = fill(-Inf, interf.nw)
+    solver.in.ubx = fill(Inf, interf.nw)
+    solver.in.lbg = fill(0.0, interf.nc)
+    solver.in.ubg = fill(0.0, interf.nc)
 
     solver.in_c = MadnlpCNumericIn{Ptr{Cdouble}}()
-    solver.in_c.x0 = Base.unsafe_convert(Ptr{Cdouble},  x0_default)
-    solver.in_c.l0 = Base.unsafe_convert(Ptr{Cdouble},  l0_default)
-    solver.in_c.lbx = Base.unsafe_convert(Ptr{Cdouble},lbx_default)
-    solver.in_c.ubx = Base.unsafe_convert(Ptr{Cdouble},ubx_default)
-    solver.in_c.lbg = Base.unsafe_convert(Ptr{Cdouble},lbg_default)
-    solver.in_c.ubg = Base.unsafe_convert(Ptr{Cdouble},ubg_default)
+    solver.in_c.x0 = Base.unsafe_convert(Ptr{Cdouble},  solver.in.x0)
+    solver.in_c.l0 = Base.unsafe_convert(Ptr{Cdouble},  solver.in.l0)
+    solver.in_c.lbx = Base.unsafe_convert(Ptr{Cdouble}, solver.in.lbx)
+    solver.in_c.ubx = Base.unsafe_convert(Ptr{Cdouble}, solver.in.ubx)
+    solver.in_c.lbg = Base.unsafe_convert(Ptr{Cdouble}, solver.in.lbg)
+    solver.in_c.ubg = Base.unsafe_convert(Ptr{Cdouble}, solver.in.ubg)
 
     solver.out_c = MadnlpCNumericOut()
 
@@ -565,11 +568,14 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
 
     # Make results available to C
     solver.out_c.sol = Base.unsafe_convert(Ptr{Cdouble},solver.res.solution)
-    solver.out_c.obj = Base.unsafe_convert(Ptr{Cdouble},Ref(solver.res.objective))
+		solver.out_c.obj = Base.unsafe_convert(Ptr{Cdouble},[solver.res.objective])
     solver.out_c.con = Base.unsafe_convert(Ptr{Cdouble},solver.res.constraints)
     solver.out_c.mul = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers)
     solver.out_c.mul_L = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_L)
     solver.out_c.mul_U = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_U)
+		solver.out_c.iter = Base.unsafe_convert(Ptr{Int64},[solver.res.iter])
+		solver.out_c.primal_feas = Base.unsafe_convert(Ptr{Cdouble},[solver.res.primal_feas])
+		solver.out_c.dual_feas = Base.unsafe_convert(Ptr{Cdouble},[solver.res.dual_feas])
 
     return 0
 

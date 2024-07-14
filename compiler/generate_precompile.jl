@@ -88,47 +88,16 @@ Cnzh_i::Ptr{Csize_t} = pointer(nzh_i)
 Cnzh_j::Ptr{Csize_t} = pointer(nzh_j)
 
 x0::Vector{Float64} = [1.0, 1.0]
-y0::Vector{Float64} = ones(ncon)
-lbx = Cdouble[-Inf, -Inf]
-ubx = Cdouble[ Inf,  Inf]
-lbg = Cdouble[0.0]
-ubg = Cdouble[0.0]
-
-Cx0::Ptr{Cdouble} = pointer(x0)
-Cy0::Ptr{Cdouble} = pointer(y0)
-Clbx::Ptr{Cdouble} = pointer(lbx)
-Cubx::Ptr{Cdouble} = pointer(ubx)
-Clbg::Ptr{Cdouble} = pointer(lbg)
-Cubg::Ptr{Cdouble} = pointer(ubg)
+y0::Vector{Float64} = [1.0]
+lbx::Vector{Float64} = [-Inf, -Inf]
+ubx::Vector{Float64} = [ Inf,  Inf]
+lbg::Vector{Float64} = [0.0]
+ubg::Vector{Float64} = [0.0]
 
 max_iters::Csize_t = 1000
 print_level::Csize_t = 3
 minimize::Bool = true
 user_data::Ptr{Cvoid} = 0
-
-sol = zeros(nvar)
-Csol::Ptr{Cdouble} = pointer(sol)
-obj = zeros(1)
-Cobj::Ptr{Cdouble} = pointer(obj)
-con = zeros(ncon)
-Ccon::Ptr{Cdouble} = pointer(con)
-
-primal_feas = zeros(1)
-Cprimal_feas::Ptr{Cdouble} = pointer(primal_feas)
-
-dual_feas = zeros(1)
-Cdual_feas::Ptr{Cdouble} = pointer(dual_feas)
-
-mul = zeros(ncon)
-Cmul::Ptr{Cdouble} = pointer(mul)
-
-mul_L = zeros(nvar)
-mul_U = zeros(nvar)
-Cmul_L::Ptr{Cdouble} = pointer(mul_L)
-Cmul_U::Ptr{Cdouble} = pointer(mul_U)
-
-iter::Vector{Int} = [1,]
-Citer::Ptr{Csize_t} = pointer(iter)
 
 # pre compile for different solvers
 
@@ -140,7 +109,20 @@ lin_solver_names = Dict(
 	4=>"LapackGPUSolver",
 	5=>"CuCholeskySolver",
 )
-cases::Vector{Tuple{Int,Int,Int}} = [(0,3,3),(2,2,1000),(1,1,1000),(0,0,1000)]
+
+sol::Vector{Float64}         = []
+obj::Vector{Float64}         = []
+con::Vector{Float64}         = []
+mul::Vector{Float64}         = []
+mul_L::Vector{Float64}       = []
+mul_U::Vector{Float64}       = []
+iter::Vector{Int64}          = []
+primal_feas::Vector{Float64} = []
+dual_feas::Vector{Float64}   = []
+
+
+cases::Vector{Tuple{Int,Int,Int}} = [(0,3,10)]
+# cases::Vector{Tuple{Int,Int,Int}} = [(0,3,10),(2,2,1000),(1,1,1000),(0,0,1000)]
 for (lin_solver_id,print_level, max_iters) in cases
 	nlp_interface = MadnlpCInterface(
 		@cfunction(eval_f,Cint,(Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid})),
@@ -162,26 +144,18 @@ for (lin_solver_id,print_level, max_iters) in cases
 
 	s = madnlp_c_create(unsafe_convert(Ptr{MadnlpCInterface}, pointer_from_objref(nlp_interface)))
 
-	inp = MadnlpCNumericIn(Cx0,Cy0,Clbx,Cubx,Clbg,Cubg)
-	# inp = MadnlpCNumericIn{Ptr{typeof(Cx0)}}()
-	# inp.x0  = Cx0
-	# inp.l0  = Cy0
-	# inp.lbx = Clbx
-	# inp.ubx = Cubx
-	# inp.lbg = Clbg
-	# inp.ubg = Cubg
-
 	@info "lbx" inp.lbx
 	out = MadnlpCNumericOut()
 
-	s_jl::MadnlpCSolver = unsafe_load(s)
-	s_jl.in_c = inp
-	s_jl.out_c = out
-	# s = unsafe_convert(Ptr{MadnlpCSolver}, pointer_from_objref(s_jl))
-	unsafe_store!(s, s_jl)
+	in_c_ptr = madnlp_c_input(s)
+	in_c = unsafe_load(in_c_ptr)
 
-  test_x0 = unsafe_wrap(Array, inp.x0, (nvar,))
-	@info test_x0
+	copyto!(unsafe_wrap(Array, in_c.x0, (nvar,)), x0)
+	copyto!(unsafe_wrap(Array, in_c.l0, (ncon,)),  y0)
+	copyto!(unsafe_wrap(Array, in_c.lbx, (nvar,)), lbx)
+	copyto!(unsafe_wrap(Array, in_c.ubx, (nvar,)), ubx)
+	copyto!(unsafe_wrap(Array, in_c.lbg, (ncon,)), lbg)
+	copyto!(unsafe_wrap(Array, in_c.ubg, (ncon,)), ubg)
 	
 	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"lin_solver_id"), lin_solver_id)
 	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"max_iters"), max_iters)
@@ -189,25 +163,32 @@ for (lin_solver_id,print_level, max_iters) in cases
 	madnlp_c_set_option_bool(s, unsafe_convert(Ptr{Int8},"minimize"), minimize)
 
 	Cret = madnlp_c_solve(s)
-					# Base.unsafe_convert(Ptr{MadnlpCNumericIn}, pointer_from_objref(inp)),
-					# Base.unsafe_convert(Ptr{MadnlpCNumericOut}, pointer_from_objref(out)))
+
+	out_c_ptr = madnlp_c_output(s)
+	out_c = unsafe_load(out_c_ptr)
 
 	@info "sol" out.sol
-	sol_out::Vector{Float64} = unsafe_wrap(Array, out.sol, nvar)
-	obj_out::Vector{Float64} = unsafe_wrap(Array, out.obj, ncon)
-	con_out::Vector{Float64} = unsafe_wrap(Array, out.con, ncon)
-	mul_out::Vector{Float64} = unsafe_wrap(Array, out.mul, ncon)
-	mull_out::Vector{Float64} = unsafe_wrap(Array, out.mul_L, nvar)
-	mulu_out::Vector{Float64} = unsafe_wrap(Array, out.mul_U, nvar)
+	global sol = unsafe_wrap(Array, out_c.sol, nvar)
+	global obj = unsafe_wrap(Array, out_c.obj, ncon)
+	global con = unsafe_wrap(Array, out_c.con, ncon)
+	global mul = unsafe_wrap(Array, out_c.mul, ncon)
+	global mul_L = unsafe_wrap(Array, out_c.mul_L, nvar)
+	global mul_U = unsafe_wrap(Array, out_c.mul_U, nvar)
+	global iter = unsafe_wrap(Array, out_c.iter, 1)
+	global primal_feas = unsafe_wrap(Array, out_c.primal_feas, 1)
+	global dual_feas = unsafe_wrap(Array, out_c.dual_feas, 1)
 
 	println("ret_code: ", Cret)
-
 	println("linear_solver: ", lin_solver_names[lin_solver_id])
-	println("sol: ", sol_out)
-	println("con: ", con_out)
-	println("obj: ", obj_out[1])
-	println("mul: ", mul_out)
-	println("mul_L: ", mull_out)
-	println("mul_U: ", mulu_out)
+
+	println("sol: ", sol)
+	println("con: ", con)
+	println("obj: ", obj)
+	println("mul: ", mul)
+	println("mul_L: ", mul_L)
+	println("mul_L: ", mul_U)
+	println("iter: ", iter)
+	println("primal_feas: ", primal_feas)
+	println("dual_feas: ", dual_feas)
 
 end

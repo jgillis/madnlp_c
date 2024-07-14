@@ -170,7 +170,6 @@ for (lin_solver_id,print_level, max_iters) in cases
 	stats_c_ptr = madnlp_c_get_stats(s)
 	stats_c = unsafe_load(stats_c_ptr)
 
-	@info "sol" out.sol
 	global sol = unsafe_wrap(Array, out_c.sol, nvar)
 	global obj = unsafe_wrap(Array, out_c.obj, ncon)
 	global con = unsafe_wrap(Array, out_c.con, ncon)

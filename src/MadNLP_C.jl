@@ -309,8 +309,8 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
 
   solver.in = MadnlpCNumericIn{Vector{Float64}}()
 
-  @info "nw" interf.nw
-  @info "nc" interf.nc
+  # @info "nw" interf.nw
+  # @info "nc" interf.nc
 
   solver.in.x0 = fill(0.0, interf.nw)
   solver.in.l0 = fill(0.0, interf.nc)
@@ -452,10 +452,10 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
   nzh_i = unsafe_wrap(Array, nlp_interface.nzh_i, (nlp_interface.nnzh,))
   nzh_j = unsafe_wrap(Array, nlp_interface.nzh_j, (nlp_interface.nnzh,))
 
-  @info "nzj_i" nzh_j
-  @info "length" nlp_interface.nnzj
-  @info "x0 julia" x0
-  @info "lvar julia" lvar
+  # @info "nzj_i" nzh_j
+  # @info "length" nlp_interface.nnzj
+  # @info "x0 julia" x0
+  # @info "lvar julia" lvar
 
   lin_solver_name = "none"
   if solver.lin_solver_id == 0
@@ -527,12 +527,12 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
     )
   end
 
-  @info "x0" x0 
-  @info "y0" y0
-  @info "lvar" lvar
-  @info "uvar" uvar
-  @info "lcon" lcon
-  @info "ucon" ucon
+  @debug "x0" x0 
+  @debug "y0" y0
+  @debug "lvar" lvar
+  @debug "uvar" uvar
+  @debug "lcon" lcon
+  @debug "ucon" ucon
 
   meta = NLPModelMeta(
     nvar,

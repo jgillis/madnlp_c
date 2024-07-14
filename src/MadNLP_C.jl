@@ -113,33 +113,33 @@ struct MadnlpCStats
 end
 
 function NLPModels.jac_structure!(nlp::GenericModel, I::AbstractVector{T}, J::AbstractVector{T}) where T
-  @info "jac_strc"
-  @info "nzj_i" nlp.nzj_i
-  @info "nzj_j" nlp.nzj_j
+  @debug "jac_strc"
+  @debug "nzj_i" nlp.nzj_i
+  @debug "nzj_j" nlp.nzj_j
   copyto!(I, nlp.nzj_i)
   copyto!(J, nlp.nzj_j)
-  @info "I"   I
-  @info "J"   J
+  @debug "I"   I
+  @debug "J"   J
 end
 
 function NLPModels.hess_structure!(nlp::GenericModel, I::AbstractVector{T}, J::AbstractVector{T}) where T
-  @info "hess_strc"
-  @info "nzh_i" nlp.nzh_i
-  @info "nzh_j" nlp.nzh_j
+  @debug "hess_strc"
+  @debug "nzh_i" nlp.nzh_i
+  @debug "nzh_j" nlp.nzh_j
   copyto!(I, nlp.nzh_i)
   copyto!(J, nlp.nzh_j)
-  @info "I"   I
-  @info "J"   J
+  @debug "I"   I
+  @debug "J"   J
 end
 
 function NLPModels.obj(nlp::GenericModel, x::AbstractVector)
-  @info "obj x=" x
+  @debug "obj x=" x
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, x)
   Cf::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.obj)
   ret::Cint = ccall(nlp.eval_f, Cint, (Ptr{Cdouble},Ptr{Cdouble}, Ptr{Cvoid}), Cx, Cf, nlp.user_data)
   if Bool(ret) @error "function call failed" end
   #WARNING unsafe_wrap pointer must be 8-aligned!
-  @info "obj = " nlp.obj
+  @debug "obj = " nlp.obj
   return  nlp.obj[1]
 end
 
@@ -147,88 +147,88 @@ function NLPModels.obj(nlp::GenericModel, x::CuArray)
   copyto!(nlp.bf.x, x)
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.x)
   # f::Vector{Float64} = Vector{Float64}(undef,1)
-  @info "obj-in" nlp.bf.x
+  @debug "obj-in" nlp.bf.x
   Cf::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.obj)
   ret::Cint = ccall(nlp.eval_f, Cint, (Ptr{Cdouble},Ptr{Cdouble}, Ptr{Cvoid}), Cx, Cf, nlp.user_data)
   if Bool(ret) @error "function call failed" end
-  @info "obj-out" nlp.obj
+  @debug "obj-out" nlp.obj
   return nlp.obj[1]
 end
 
 function NLPModels.cons!(nlp::GenericModel, x::AbstractVector, c::AbstractVector)
-  @info "cons x = " x
+  @debug "cons x = " x
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, x)
   Cc::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, c)
   ret::Cint = ccall(nlp.eval_g, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, Cc, nlp.user_data)
   if Bool(ret) @error "function call failed" end
-  @info "cons = " c
+  @debug "cons = " c
   return c
 end
 
 function NLPModels.cons!(nlp::GenericModel, x::CuArray, c::CuArray)
   copyto!(nlp.bf.x, x)
-  @info "GPU cons in" nlp.bf.x
+  @debug "GPU cons in" nlp.bf.x
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.x)
   Cc::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.cons)
   ret::Cint = ccall(nlp.eval_g, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, Cc, nlp.user_data)
   if Bool(ret) @error "GPU cons failed" end
-  @info "GPU cons out" nlp.bf.cons
+  @debug "GPU cons out" nlp.bf.cons
   copyto!(c, nlp.bf.cons)
   return c
 end
 
 function NLPModels.grad!(nlp::GenericModel, x::AbstractVector, g::AbstractVector)
-  @info "grad-in"
+  @debug "grad-in"
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, x)
   Cg::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, g)
-  @info "grad-in" x
+  @debug "grad-in" x
   ret::Cint = ccall(nlp.eval_grad_f, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, Cg, nlp.user_data)
   if Bool(ret) @error "function call failed" end
-  @info "grad-out" g
+  @debug "grad-out" g
   # g = unsafe_wrap(Array, Cg, nlp.meta.nnzo)
   return g
 end
 
 function NLPModels.grad!(nlp::GenericModel, x::CuArray, g::CuArray)
   copyto!(nlp.bf.x, x)
-  @info "GPU grad in" nlp.bf.x
+  @debug "GPU grad in" nlp.bf.x
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.x)
   Cg::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.grad_f)
   ret::Cint = ccall(nlp.eval_grad_f, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, Cg, nlp.user_data)
   if Bool(ret) @error "GPU grad failed" end
-  @info "GPU grad out" nlp.bf.grad_f
+  @debug "GPU grad out" nlp.bf.grad_f
   copyto!(g, nlp.bf.grad_f)
   return g
 end
 
 function NLPModels.jac_coord!(nlp::GenericModel, x::AbstractVector, J::AbstractVector)
-  @info "jac_g"
+  @debug "jac_g"
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, x)
   CJ::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, J)
   ret::Cint = ccall(nlp.eval_jac_g, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, CJ, nlp.user_data)
   if Bool(ret) @error "function call failed" end
   J = unsafe_wrap(Array, CJ, nlp.meta.nnzj)
-  @info "jac_g"
+  @debug "jac_g"
   return J
 end
 
 function NLPModels.jac_coord!(nlp::GenericModel, x::CuArray, J::CuArray)
   copyto!(nlp.bf.x, x)
-  @info "GPU jac in" nlp.bf.x
+  @debug "GPU jac in" nlp.bf.x
   # copyto!(nlp.bf.jac_g, J)
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.x)
   CJ::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.jac_g)
   ret::Cint = ccall(nlp.eval_jac_g, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, CJ, nlp.user_data)
   if Bool(ret) @error "GPU jac failed" end
   # J = unsafe_wrap(Array, CJ, nlp.meta.nnzj)
-  @info "GPU jac out" nlp.bf.jac_g
+  @debug "GPU jac out" nlp.bf.jac_g
   copyto!(J, nlp.bf.jac_g)
   return J
 end
 
 function NLPModels.hess_coord!(nlp::GenericModel, x::AbstractVector, y::AbstractVector, H::AbstractVector;
                                 obj_weight::Float64=1.0)
-  @info "hess"
+  @debug "hess"
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, x)
   Cy::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, y)
   CH::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, H)
@@ -237,7 +237,7 @@ function NLPModels.hess_coord!(nlp::GenericModel, x::AbstractVector, y::Abstract
                     obj_weight, Cx, Cy, CH, nlp.user_data)
   if Bool(ret) @error "function call failed" end
   H = unsafe_wrap(Array, CH, nlp.meta.nnzh)
-  @info "hess" x H
+  @debug "hess" x H
   return H
 end
 
@@ -246,8 +246,8 @@ function NLPModels.hess_coord!(nlp::GenericModel, x::CuArray, y::CuArray, H::CuA
   copyto!(nlp.bf.x, x)
   copyto!(nlp.bf.l, y)
   # copyto!(nlp.bf.hess_l, H)
-  @info "GPU hess x.in" nlp.bf.x
-  @info "GPU hess l.in" nlp.bf.l
+  @debug "GPU hess x.in" nlp.bf.x
+  @debug "GPU hess l.in" nlp.bf.l
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.x)
   Cy::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.l)
   CH::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.hess_l)
@@ -255,7 +255,7 @@ function NLPModels.hess_coord!(nlp::GenericModel, x::CuArray, y::CuArray, H::CuA
                     (Float64, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cvoid}),
                     obj_weight, Cx, Cy, CH, nlp.user_data)
   if Bool(ret) @error "GPU hess failed" end
-  @info "GPU hess out" nlp.bf.grad_f
+  @debug "GPU hess out" nlp.bf.grad_f
   copyto!(H, nlp.bf.hess_l)
   # H = unsafe_wrap(Array, CH, nlp.meta.nnzh)
   return H

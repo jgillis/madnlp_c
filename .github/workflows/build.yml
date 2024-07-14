@@ -29,27 +29,27 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
       - run: |
-              mkdir build
-              cmake -B build
-              make -C build
-              #julia --startup-file=no --project=. -e 'using Pkg; Pkg.instantiate()'
-              #julia --startup-file=no --project=compiler -e 'using Pkg; Pkg.instantiate()'
-              #julia --startup-file=no --project=compiler compiler/build.jl foo
+              #mkdir build
+              #cmake -B build
+              #make -C build
+              julia --startup-file=no --project=. -e 'using Pkg; Pkg.instantiate()'
+              julia --startup-file=no --project=compiler -e 'using Pkg; Pkg.instantiate()'
+              julia --startup-file=no --project=compiler compiler/build.jl foo
       # Upload as release asset
       - uses: vimtor/action-zip@v1.1
         with:
-          files: build/madnlp_c-0.8.3-0.1.0/
+          files: foo/
           recursive: true
-          dest: madnlp_c-0.8.3-1.zip
-      - name: Upload files to a GitHub release
-        uses: svenstaro/upload-release-action@2.9.0
-        with:
-          overwrite: true
-          tag: v0.1
-          file: madnlp_c-0.8.3-1.zip
-          asset_name: madnlp-jl${{ matrix.version}}-${{ matrix.os }}-${{ matrix.arch }}.zip
-          prerelease: true
+          dest: foo.zip
+      #- name: Upload files to a GitHub release
+        #uses: svenstaro/upload-release-action@2.9.0
+        #with:
+          #overwrite: true
+          #tag: v0.1
+          #file: foo.zip
+          #asset_name: madnlp-jl${{ matrix.version}}-${{ matrix.os }}-${{ matrix.arch }}.zip
+          #prerelease: true
       - uses: actions/upload-artifact@v4.3.1
         with:
           name: madnlp-jl${{ matrix.version}}-${{ matrix.os }}-${{ matrix.arch }}
-          path: build/madnlp_c-0.8.3-0.1.0/
+          path: foo.zip

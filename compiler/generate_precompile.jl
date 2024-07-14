@@ -160,7 +160,7 @@ for (lin_solver_id,print_level, max_iters) in cases
 	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"lin_solver_id"), lin_solver_id)
 	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"max_iters"), max_iters)
 	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"print_level"), print_level)
-	madnlp_c_set_option_bool(s, unsafe_convert(Ptr{Int8},"minimize"), minimize)
+	madnlp_c_set_option_bool(s, unsafe_convert(Ptr{Int8},"minimize"), Int64(minimize))
 
 	Cret = madnlp_c_solve(s)
 

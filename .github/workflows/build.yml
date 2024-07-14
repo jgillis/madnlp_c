@@ -9,9 +9,6 @@ jobs:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
-    permissions: # needed to allow julia-actions/cache to proactively delete old caches that it has created
-      actions: write
-      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -32,16 +29,11 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
       - run: |
-              #mkdir build
-              #cmake -B build
-              #make -C build
-              julia --startup-file=no --project=. -e 'using Pkg; Pkg.instantiate()'
-              julia --startup-file=no --project=compiler -e 'using Pkg; Pkg.instantiate()'
-              julia --startup-file=no --project=compiler compiler/build.jl foo
+              cmake -B build -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON
       # Upload as release asset
       - uses: vimtor/action-zip@v1.2
         with:
-          files: foo/
+          files: build/madnlp_c--0.1.0
           recursive: true
           dest: foo.zip
       - uses: actions/upload-artifact@v4.3.1

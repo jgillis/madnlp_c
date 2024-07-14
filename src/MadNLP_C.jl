@@ -301,7 +301,7 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
   solver = MadnlpCSolver()
   solver.nlp_interface = unsafe_load(nlp_interface)
   solver.lin_solver_id = 0
-  solver.max_iters = 1000
+  solver.max_iters = 3000
   solver.print_level = 5
   solver.minimize = true
 
@@ -309,8 +309,10 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
 
   solver.in = MadnlpCNumericIn{Vector{Float64}}()
 
-  # @info "nw" interf.nw
-  # @info "nc" interf.nc
+  @info "interf" interf
+
+  @info "nw" interf.nw
+  @info "nc" interf.nc
 
   solver.in.x0 = fill(0.0, interf.nw)
   solver.in.l0 = fill(0.0, interf.nc)

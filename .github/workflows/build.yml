@@ -29,8 +29,9 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
       - run: |
-              cmake -B build -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON
-              cmake --build build --target madnlp_c
+              julia --startup-file=no --project=. -e 'using Pkg; Pkg.instantiate()'
+              julia --startup-file=no --project=compiler -e 'using Pkg; Pkg.instantiate()'
+              julia --startup-file=no --project=compiler compiler/build.jl foo
       # Upload as release asset
       - uses: vimtor/action-zip@v1.2
         with:

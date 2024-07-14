@@ -29,8 +29,8 @@ jobs:
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
       - run: |
-              cmake -B build -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON -DCMAKE_INSTALL_PREFIX=/work/install
-              cmake --build /work/build --target madnlp_c
+              cmake -B build -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON
+              cmake --build build --target madnlp_c
       # Upload as release asset
       - uses: vimtor/action-zip@v1.2
         with:

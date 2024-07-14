@@ -96,7 +96,7 @@ MADNLP_SYMBOL_EXPORT const struct MadnlpCNumericIn* madnlp_c_input(struct Madnlp
 /* -1 for not found, 0 for double, 1 for int, 2 for bool, 3 for string */
 MADNLP_SYMBOL_EXPORT int madnlp_c_option_type(const char* name);
 MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_double(struct MadnlpCSolver* s, const char* name, double val);
-MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_bool(struct MadnlpCSolver* s, const char* name, bool val);
+MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_bool(struct MadnlpCSolver* s, const char* name, madnlp_int val);
 MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_int(struct MadnlpCSolver* s, const char* name, madnlp_int val);
 MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_string(struct MadnlpCSolver* s, const char* name, const char* val);
 

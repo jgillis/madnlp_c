@@ -5,7 +5,7 @@ set(CMAKE_VERBOSE_MAKEFILE 1)
 set(VERBOSE  1)
 
 set(CASADI_DIR ${PROJECT_SOURCE_DIR}/../../casadi/build_madnlp/test/)
-set(MADNLP_DIR ${PROJECT_SOURCE_DIR}/../build/madnlp_c-0.8.3-1.0.0/)
+set(MADNLP_DIR ${PROJECT_SOURCE_DIR}/../build/madnlp_c-0.8.3-0.1.0/)
 set(JULIA_DIR ${HOME}/.julia/juliaup/julia-1.10.4+0.x64.linux.gnu)
 
 set(JULIA_INCLUDE_DIR ${JULIA_DIR}/include/julia/)

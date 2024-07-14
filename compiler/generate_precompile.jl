@@ -167,6 +167,9 @@ for (lin_solver_id,print_level, max_iters) in cases
 	out_c_ptr = madnlp_c_output(s)
 	out_c = unsafe_load(out_c_ptr)
 
+	stats_c_ptr = madnlp_c_get_stats(s)
+	stats_c = unsafe_load(stats_c_ptr)
+
 	@info "sol" out.sol
 	global sol = unsafe_wrap(Array, out_c.sol, nvar)
 	global obj = unsafe_wrap(Array, out_c.obj, ncon)
@@ -174,21 +177,23 @@ for (lin_solver_id,print_level, max_iters) in cases
 	global mul = unsafe_wrap(Array, out_c.mul, ncon)
 	global mul_L = unsafe_wrap(Array, out_c.mul_L, nvar)
 	global mul_U = unsafe_wrap(Array, out_c.mul_U, nvar)
-	global iter = unsafe_wrap(Array, out_c.iter, 1)
 	global primal_feas = unsafe_wrap(Array, out_c.primal_feas, 1)
 	global dual_feas = unsafe_wrap(Array, out_c.dual_feas, 1)
+
+	global iter = unsafe_wrap(Array, stats_c.iter, 1)
 
 	println("ret_code: ", Cret)
 	println("linear_solver: ", lin_solver_names[lin_solver_id])
 
+  println("obj: ", obj[1])
 	println("sol: ", sol)
 	println("con: ", con)
-	println("obj: ", obj)
 	println("mul: ", mul)
 	println("mul_L: ", mul_L)
-	println("mul_L: ", mul_U)
-	println("iter: ", iter)
-	println("primal_feas: ", primal_feas)
-	println("dual_feas: ", dual_feas)
+	println("mul_U: ", mul_U)
+  println("primal_feas: ", primal_feas[1])
+  println("dual_feas: ", dual_feas[1])
+
+  println("iter: ", iter[1])
 
 end

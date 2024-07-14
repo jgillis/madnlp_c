@@ -89,10 +89,14 @@ mutable struct MadnlpCNumericOut
   mul::Ptr{Cdouble}
   mul_L::Ptr{Cdouble}
   mul_U::Ptr{Cdouble}
-  iter::Ptr{Int64}
   primal_feas::Ptr{Cdouble}
   dual_feas::Ptr{Cdouble}
   MadnlpCNumericOut() = new()
+end
+
+mutable struct MadnlpCStats
+  iter::Ptr{Int64}
+  MadnlpCStats() = new()
 end
 
 mutable struct MadnlpCSolver
@@ -104,13 +108,11 @@ mutable struct MadnlpCSolver
   res::MadNLP.MadNLPExecutionStats{Float64, Vector{Float64}}
   in_c::MadnlpCNumericIn{Ptr{Cdouble}}
   out_c::MadnlpCNumericOut
+  stats_c::MadnlpCStats
   in::MadnlpCNumericIn{Vector{Float64}}
   MadnlpCSolver() = new()
 end
 
-struct MadnlpCStats
-    iter::Int64
-end
 
 function NLPModels.jac_structure!(nlp::GenericModel, I::AbstractVector{T}, J::AbstractVector{T}) where T
   @debug "jac_strc"
@@ -326,6 +328,7 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
   solver.in_c.ubg = Base.unsafe_convert(Ptr{Cdouble}, solver.in.ubg)
 
   solver.out_c = MadnlpCNumericOut()
+  solver.stats_c = MadnlpCStats()
 
   # Copy the solver object to the allocated memory
   unsafe_store!(solver_ptr, solver)
@@ -335,34 +338,40 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
 end
 
 Base.@ccallable function madnlp_c_input(s::Ptr{MadnlpCSolver})::Ptr{MadnlpCNumericIn{Ptr{Cdouble}}}
-    solver = unsafe_load(s)
+  solver = unsafe_load(s)
 
-    return Base.unsafe_convert(Ptr{MadnlpCNumericIn{Ptr{Cdouble}}},Ref(solver.in_c))
+  return Base.unsafe_convert(Ptr{MadnlpCNumericIn{Ptr{Cdouble}}},Ref(solver.in_c))
 end
 
 Base.@ccallable function madnlp_c_output(s::Ptr{MadnlpCSolver})::Ptr{MadnlpCNumericOut}
-    solver = unsafe_load(s)
+  solver = unsafe_load(s)
 
-    return Base.unsafe_convert(Ptr{MadnlpCNumericOut},Ref(solver.out_c))
+  return Base.unsafe_convert(Ptr{MadnlpCNumericOut},Ref(solver.out_c))
+end
+
+Base.@ccallable function madnlp_c_get_stats(s::Ptr{MadnlpCSolver})::Ptr{MadnlpCStats}
+  solver = unsafe_load(s)
+
+  return Base.unsafe_convert(Ptr{MadnlpCStats},Ref(solver.stats_c))
 end
 
 Base.@ccallable function madnlp_c_option_type(name::Ptr{Cchar})::Cint
-    n = unsafe_string(name)
-    if n == "tol" return 0 end
-    if n == "max_iter" return 1 end
-    if n == "print_level" return 1 end
-    if n == "lin_solver_id" return 1 end
-    if n == "minimize" return 2 end
-    return -1
+  n = unsafe_string(name)
+  if n == "tol" return 0 end
+  if n == "max_iter" return 1 end
+  if n == "print_level" return 1 end
+  if n == "lin_solver_id" return 1 end
+  if n == "minimize" return 2 end
+  return -1
 end
 
 Base.@ccallable function madnlp_c_set_option_double(s::Ptr{MadnlpCSolver}, name::Ptr{Cchar}, val::Cdouble)::Cint
-    try
-        set_option(s, unsafe_string(name), val)
-    catch e
-        return 1
-    end
-    return 0
+  try
+    set_option(s, unsafe_string(name), val)
+  catch e
+    return 1
+  end
+  return 0
 end
 
 Base.@ccallable function madnlp_c_set_option_bool(s::Ptr{MadnlpCSolver}, name::Ptr{Cchar}, val::Bool)::Cint
@@ -389,10 +398,6 @@ Base.@ccallable function madnlp_c_set_option_string(s::Ptr{MadnlpCSolver}, name:
   catch e
     return 1
   end
-  return 0
-end
-
-Base.@ccallable function madnlp_c_get_stats(s::Ptr{MadnlpCSolver})::Ptr{MadnlpCStats}
   return 0
 end
 
@@ -476,7 +481,6 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
     GPU_DEVICE = true
   end
   @info "Using linear solver $(lin_solver_name)"
-
 
   buffers = nothing
   if GPU_DEVICE
@@ -573,9 +577,10 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
   solver.out_c.mul = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers)
   solver.out_c.mul_L = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_L)
   solver.out_c.mul_U = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_U)
-  solver.out_c.iter = Base.unsafe_convert(Ptr{Int64},[solver.res.iter])
   solver.out_c.primal_feas = Base.unsafe_convert(Ptr{Cdouble},[solver.res.primal_feas])
   solver.out_c.dual_feas = Base.unsafe_convert(Ptr{Cdouble},[solver.res.dual_feas])
+
+	solver.stats_c.iter = Base.unsafe_convert(Ptr{Int64},[Int64(solver.res.iter)])
 
   return 0
 

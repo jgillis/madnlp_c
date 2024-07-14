@@ -2,11 +2,14 @@
 #include <stdio.h>
 #include <algorithm>
 #include <iostream>
+#include <vector>
 
 extern "C" {
   int init_julia(int, char**);
   void shutdown_julia(int);
 }
+
+using namespace std;
 
 double a = 1.0;
 double b = 100.0;
@@ -84,7 +87,7 @@ int main(int argc, char** argv) {
 
   struct MadnlpCSolver* solver = madnlp_c_create(&interf);
 
-  madnlp_c_set_option_int(solver, "max_iter", 5);
+  madnlp_c_set_option_int(solver, "max_iters", 10);
   madnlp_c_set_option_int(solver, "print_level", 2);
   madnlp_c_set_option_int(solver, "lin_solver_id", 1);
 
@@ -97,18 +100,45 @@ int main(int argc, char** argv) {
   std::copy(ubg,ubg+1,in->ubg);
 
   madnlp_c_solve(solver);
+
   const MadnlpCNumericOut* out = madnlp_c_output(solver);
 
-  double sol[2];
-  double cons[1];
-  double obj[1];
-  std::copy(out->sol,out->sol+2,sol);
-  std::copy(out->con,out->con+1,cons);
-  std::copy(out->obj,out->obj+1,obj);
+  std::vector<double> sol(nw);
+  std::vector<double> con(nc);
+  std::vector<double> mul(nc);
+  std::vector<double> mul_L(nw);
+  std::vector<double> mul_U(nw);
+  double obj;
+  double primal_feas;
+  double dual_feas;
 
-  std::cout << "sol: " << sol[0] << ", " << sol[1] << std::endl;
-  std::cout << "obj: " << obj[1] << std::endl;
-  std::cout << "con: " << con[1] << std::endl;
+  std::copy(out->sol,out->sol+nw,sol.begin());
+  std::copy(out->con,out->con+nc,con.begin());
+  std::copy(out->mul,out->mul+nc,mul.begin());
+  std::copy(out->mul_L,out->mul_L+nw,mul_L.begin());
+  std::copy(out->mul_U,out->mul_U+nw,mul_U.begin());
+  obj = *(out->obj);
+  primal_feas = *(out->primal_feas);
+  dual_feas = *(out->dual_feas);
+
+  const MadnlpCStats* stats = madnlp_c_get_stats(solver);
+  madnlp_int iter = *(stats->iter);
+
+  cout << "sol: ";
+  for (auto el: sol) cout << el << " "; cout << endl;
+  cout << "con: ";
+  for (auto el: con) cout << el << " "; cout << endl;
+  cout << "mul: ";
+  for (auto el: mul) cout << el << " "; cout << endl;
+  cout << "mul_L: ";
+  for (auto el: mul_L) cout << el << " "; cout << endl;
+  cout << "mul_U: ";
+  for (auto el: mul_U) cout << el << " "; cout << endl;
+
+  cout << "obj: " << obj << endl;
+  cout << "primal_feas: " << primal_feas << endl;
+  cout << "dual_feas: " << dual_feas << endl;
+  cout << "iter: " << iter << endl;
 
   shutdown_julia(0);
 

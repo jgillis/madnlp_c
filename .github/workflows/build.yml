@@ -30,10 +30,8 @@ jobs:
       - uses: julia-actions/cache@v2
       - run: |
               mkdir build
-              pushd build
-              cmake ..
-              make
-              popd
+              cmake -B build
+              make -C build
               #julia --startup-file=no --project=. -e 'using Pkg; Pkg.instantiate()'
               #julia --startup-file=no --project=compiler -e 'using Pkg; Pkg.instantiate()'
               #julia --startup-file=no --project=compiler compiler/build.jl foo

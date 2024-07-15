@@ -185,9 +185,5 @@ for (lin_solver_id,print_level, max_iters) in cases
 	println("mul: ", mul)
 	println("mul_L: ", mul_L)
 	println("mul_U: ", mul_U)
-  println("primal_feas: ", primal_feas[1])
-  println("dual_feas: ", dual_feas[1])
-
-  println("iter: ", iter[1])
 
 end

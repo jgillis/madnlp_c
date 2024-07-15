@@ -1,6 +1,6 @@
+authors = ["Tommaso Sartor <tmmsartor@protonmail.com>", "Joris Gillis <joris@yacoda.com>"]
 name = "MadNLP_C"
 uuid = "809fdad6-fa7d-470e-b0f3-59f70ed6c6e6"
-authors = ["Tommaso Sartor <tmmsartor@protonmail.com>", "Joris Gillis <joris@yacoda.com>"]
 version = "0.1.0"
 
 [deps]
@@ -11,3 +11,6 @@ MadNLPGPU = "d72a61cc-809d-412f-99be-fd81f4b8a598"
 MadNLPMumps = "3b83494e-c0a4-4895-918b-9157a7a085a1"
 NLPModels = "a4795742-8479-5a88-8948-cc11e1c8c1a6"
 UnsafePointers = "e17b2a0c-0bdf-430a-bd0c-3a23cae4ff39"
+
+[extras]
+CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"

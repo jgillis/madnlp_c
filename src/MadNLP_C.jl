@@ -95,7 +95,10 @@ mutable struct MadnlpCNumericOut
 end
 
 mutable struct MadnlpCStats
-  iter::Ptr{Int64}
+  iter::Int64
+  status::Int64
+  dual_feas::Float64
+  primal_feas::Float64
   MadnlpCStats() = new()
 end
 
@@ -194,12 +197,10 @@ end
 
 function NLPModels.jac_coord!(nlp::GenericModel, x::CuArray, J::CuArray)
   copyto!(nlp.bf.x, x)
-  # copyto!(nlp.bf.jac_g, J)
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.x)
   CJ::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.jac_g)
   ret::Cint = ccall(nlp.eval_jac_g, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, CJ, nlp.user_data)
   if Bool(ret) @error "GPU jac failed" end
-  # J = unsafe_wrap(Array, CJ, nlp.meta.nnzj)
   copyto!(J, nlp.bf.jac_g)
   return J
 end
@@ -307,6 +308,21 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
   unsafe_copyto!(Base.unsafe_convert(Ptr{Int64}, solver.nzh_i), interf.nzh_i, interf.nnzh)
   unsafe_copyto!(Base.unsafe_convert(Ptr{Int64}, solver.nzh_j), interf.nzh_j, interf.nnzh)
 
+  solver.res = MadNLP.MadNLPExecutionStats{Float64, Vector{Float64}}(
+    MadNLP.MadNLPOptions(tol=0, callback=MadNLP.SparseCallback, kkt_system=MadNLP.SparseKKTSystem, linear_solver=MadNLPMumps.MumpsSolver),
+    MadNLP.INTERNAL_ERROR,
+    Vector{Float64}(undef, interf.nw),
+    0.0,
+    Vector{Float64}(undef, interf.nc),
+    0.0,
+    0.0,
+    Vector{Float64}(undef, interf.nc),
+    Vector{Float64}(undef, interf.nw),
+    Vector{Float64}(undef, interf.nw),
+    0,
+    MadNLP.MadNLPCounters(start_time=0.0)
+  )
+
   # Copy the solver object to the allocated memory
   unsafe_store!(solver_ptr, solver)
 
@@ -328,6 +344,11 @@ end
 
 Base.@ccallable function madnlp_c_get_stats(s::Ptr{MadnlpCSolver})::Ptr{MadnlpCStats}
   solver = unsafe_load(s)
+
+  solver.stats_c.iter = solver.res.iter
+  solver.stats_c.status = Integer(solver.res.status)
+  solver.stats_c.dual_feas = solver.res.dual_feas
+  solver.stats_c.primal_feas = solver.res.primal_feas
 
   return Base.unsafe_convert(Ptr{MadnlpCStats},Ref(solver.stats_c))
 end
@@ -533,7 +554,23 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
   )
 
   madnlp_solver = MadNLPSolver(nlp; print_level = madnlp_log, linear_solver = linear_solver)
-  solver.res = MadNLP.solve!(madnlp_solver, max_iter = Int(solver.max_iters))
+  res = MadNLP.solve!(madnlp_solver, max_iter = Int(solver.max_iters))
+  if GPU_DEVICE
+    copyto!(solver.res.solution, res.solution)
+    solver.res.objective = res.objective
+    copyto!(solver.res.constraints, res.constraints)
+    copyto!(solver.res.multipliers, res.multipliers)
+    copyto!(solver.res.multipliers_L, res.multipliers_L)
+    copyto!(solver.res.multipliers_U, res.multipliers_U)
+    solver.res.dual_feas = res.dual_feas
+    solver.res.primal_feas = res.primal_feas
+    solver.res.counters = res.counters
+    solver.res.iter = res.iter
+    solver.res.options = res.options
+    solver.res.status = res.status
+  else
+    solver.res = res
+  end
 
   # Make results available to C
   solver.out_c.sol = Base.unsafe_convert(Ptr{Cdouble},solver.res.solution)
@@ -542,10 +579,6 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
   solver.out_c.mul = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers)
   solver.out_c.mul_L = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_L)
   solver.out_c.mul_U = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_U)
-  solver.out_c.primal_feas = Base.unsafe_convert(Ptr{Cdouble},[solver.res.primal_feas])
-  solver.out_c.dual_feas = Base.unsafe_convert(Ptr{Cdouble},[solver.res.dual_feas])
-
-	solver.stats_c.iter = Base.unsafe_convert(Ptr{Int64},[Int64(solver.res.iter)])
 
   return 0
 

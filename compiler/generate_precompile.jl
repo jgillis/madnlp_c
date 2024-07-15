@@ -144,7 +144,6 @@ for (lin_solver_id,print_level, max_iters) in cases
 
 	s = madnlp_c_create(unsafe_convert(Ptr{MadnlpCInterface}, pointer_from_objref(nlp_interface)))
 
-	@info "lbx" inp.lbx
 	out = MadnlpCNumericOut()
 
 	in_c_ptr = madnlp_c_input(s)
@@ -176,10 +175,6 @@ for (lin_solver_id,print_level, max_iters) in cases
 	global mul = unsafe_wrap(Array, out_c.mul, ncon)
 	global mul_L = unsafe_wrap(Array, out_c.mul_L, nvar)
 	global mul_U = unsafe_wrap(Array, out_c.mul_U, nvar)
-	global primal_feas = unsafe_wrap(Array, out_c.primal_feas, 1)
-	global dual_feas = unsafe_wrap(Array, out_c.dual_feas, 1)
-
-	global iter = unsafe_wrap(Array, stats_c.iter, 1)
 
 	println("ret_code: ", Cret)
 	println("linear_solver: ", lin_solver_names[lin_solver_id])

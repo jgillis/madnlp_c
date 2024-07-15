@@ -41,6 +41,31 @@ typedef int (*MadnlpCEvalObjGrad)(const double*, double*, void*);
 typedef int (*MadnlpCEvalConstrJac)(const double*, double*, void*);
 typedef int (*MadnlpCEvalLagHess)(double, const double*, const double*, double*, void*);
 
+enum MadnlpCStatus {
+  MADNLP_SOLVE_SUCCEEDED = 1,
+  MADNLP_SOLVED_TO_ACCEPTABLE_LEVEL = 2,
+  MADNLP_SEARCH_DIRECTION_BECOMES_TOO_SMALL = 3,
+  MADNLP_DIVERGING_ITERATES = 4,
+  MADNLP_INFEASIBLE_PROBLEM_DETECTED = 5,
+  MADNLP_MAXIMUM_ITERATIONS_EXCEEDED = 6,
+  MADNLP_MAXIMUM_WALLTIME_EXCEEDED = 7,
+  MADNLP_INITIAL = 11,
+  MADNLP_REGULAR = 12,
+  MADNLP_RESTORE = 13,
+  MADNLP_ROBUST  = 14,
+  MADNLP_RESTORATION_FAILED = -1,
+  MADNLP_INVALID_NUMBER_DETECTED = -2,
+  MADNLP_ERROR_IN_STEP_COMPUTATION = -3,
+  MADNLP_NOT_ENOUGH_DEGREES_OF_FREEDOM = -4,
+  MADNLP_USER_REQUESTED_STOP = -5,
+  MADNLP_INTERNAL_ERROR = -6,
+  MADNLP_INVALID_NUMBER_OBJECTIVE = -7,
+  MADNLP_INVALID_NUMBER_GRADIENT = -8,
+  MADNLP_INVALID_NUMBER_CONSTRAINTS = -9,
+  MADNLP_INVALID_NUMBER_JACOBIAN = -10,
+  MADNLP_INVALID_NUMBER_HESSIAN_LAGRANGIAN = -11
+};
+
 struct MadnlpCInterface {
   MadnlpCEvalObj eval_obj;
   MadnlpCEvalConstr eval_constr;
@@ -81,12 +106,13 @@ struct MadnlpCNumericOut {
   const double* mul;
   const double* mul_L;
   const double* mul_U;
-  const double* primal_feas;
-  const double* dual_feas;
 };
 
 struct MadnlpCStats {
-  const madnlp_int* iter;
+  madnlp_int iter;
+  madnlp_int status;
+  double dual_feas;
+  double primal_feas;
 };
 
 MADNLP_SYMBOL_EXPORT struct MadnlpCSolver* madnlp_c_create(struct MadnlpCInterface* nlp_interface);

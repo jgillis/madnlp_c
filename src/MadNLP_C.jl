@@ -110,6 +110,11 @@ mutable struct MadnlpCSolver
   out_c::MadnlpCNumericOut
   stats_c::MadnlpCStats
   in::MadnlpCNumericIn{Vector{Float64}}
+
+  nzj_i::Array{Int64}
+  nzj_j::Array{Int64}
+  nzh_i::Array{Int64}
+  nzh_j::Array{Int64}
   MadnlpCSolver() = new()
 end
 
@@ -332,6 +337,22 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
   solver.out_c = MadnlpCNumericOut()
   solver.stats_c = MadnlpCStats()
 
+  # nzj_i may not be properly aligned, so copying is neededs
+  solver.nzj_i = Array{Int64}(undef, interf.nnzj)
+  solver.nzj_j = Array{Int64}(undef, interf.nnzj)
+  solver.nzh_i = Array{Int64}(undef, interf.nnzh)
+  solver.nzh_j = Array{Int64}(undef, interf.nnzh)
+
+  stuff = Base.unsafe_convert(Ptr{Int64}, solver.nzj_i)
+  @info "solver.nzj_i" stuff
+  stuff2 = interf.nzj_i
+  @info "interf.nzj_i" stuff2
+
+  unsafe_copyto!(Base.unsafe_convert(Ptr{Int64}, solver.nzj_i), interf.nzj_i, interf.nnzj)
+  unsafe_copyto!(Base.unsafe_convert(Ptr{Int64}, solver.nzj_j), interf.nzj_j, interf.nnzj)
+  unsafe_copyto!(Base.unsafe_convert(Ptr{Int64}, solver.nzh_i), interf.nzh_i, interf.nnzh)
+  unsafe_copyto!(Base.unsafe_convert(Ptr{Int64}, solver.nzh_j), interf.nzh_j, interf.nnzh)
+
   # Copy the solver object to the allocated memory
   unsafe_store!(solver_ptr, solver)
 
@@ -449,10 +470,11 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
 
   GPU_DEVICE::Bool = false
 
-  nzj_i = unsafe_wrap(Array, nlp_interface.nzj_i, (nlp_interface.nnzj,))
-  nzj_j = unsafe_wrap(Array, nlp_interface.nzj_j, (nlp_interface.nnzj,))
-  nzh_i = unsafe_wrap(Array, nlp_interface.nzh_i, (nlp_interface.nnzh,))
-  nzh_j = unsafe_wrap(Array, nlp_interface.nzh_j, (nlp_interface.nnzh,))
+
+  nzj_i = solver.nzj_i
+  nzj_j = solver.nzj_j
+  nzh_i = solver.nzh_i
+  nzh_j = solver.nzh_j
 
   # @info "nzj_i" nzh_j
   # @info "length" nlp_interface.nnzj

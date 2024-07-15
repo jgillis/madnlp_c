@@ -55,6 +55,7 @@ add_custom_command(
   OUTPUT ${PROJECT_BINARY_DIR}/library_precompilation_dummy.txt
   DEPENDS ${PROJECT_BINARY_DIR}/PackageCompiler_env_status.txt
   DEPENDS ${PROJECT_SOURCE_DIR}/src/MadNLP_C.jl
+  DEPENDS ${PROJECT_SOURCE_DIR}/compiler/build.jl
   COMMAND echo 1 > ${PROJECT_BINARY_DIR}/library_precompilation_dummy.txt
   COMMAND ${Julia_EXECUTABLE} --startup-file=no --project=compiler ${BUILD_SCRIPT} ${PROJECT_BINARY_DIR}/${MADNLP_C_FULLNAME}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

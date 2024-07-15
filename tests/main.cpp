@@ -49,6 +49,7 @@ int eval_h(double obj_scale, const double* w, const double* l, double* h, void* 
 
 int main(int argc, char** argv) {
   init_julia(argc, argv);
+  printf("Julia initialized\n");
 
   madnlp_int nw = 2;
   madnlp_int nc = 1;
@@ -81,9 +82,8 @@ int main(int argc, char** argv) {
   double lbg[1] = {0};
   double ubg[1] = {0};
 
-  printf("lbx %p, ubx %p\n", lbx, ubx);
-
-  printf("interf %p\n", &interf);
+  //printf("lbx %p, ubx %p\n", lbx, ubx);
+  //printf("interf %p\n", &interf);
 
   struct MadnlpCSolver* solver = madnlp_c_create(&interf);
 
@@ -99,6 +99,7 @@ int main(int argc, char** argv) {
   std::copy(lbg,lbg+1,in->lbg);
   std::copy(ubg,ubg+1,in->ubg);
 
+  printf("Solving\n");
   madnlp_c_solve(solver);
 
   const MadnlpCNumericOut* out = madnlp_c_output(solver);

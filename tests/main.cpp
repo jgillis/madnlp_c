@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
   interf.nzh_i = nzh_i;
   interf.nzh_j = nzh_j;
 
+  interf.nnzo = nw;
   interf.nnzj = 2;
   interf.nnzh = 3;
 
@@ -82,14 +83,11 @@ int main(int argc, char** argv) {
   double lbg[1] = {0};
   double ubg[1] = {0};
 
-  //printf("lbx %p, ubx %p\n", lbx, ubx);
-  //printf("interf %p\n", &interf);
-
   struct MadnlpCSolver* solver = madnlp_c_create(&interf);
 
   madnlp_c_set_option_int(solver, "max_iters", 10);
-  madnlp_c_set_option_int(solver, "print_level", 2);
-  madnlp_c_set_option_int(solver, "lin_solver_id", 1);
+  madnlp_c_set_option_int(solver, "print_level", 0);
+  madnlp_c_set_option_int(solver, "lin_solver_id", 3);
 
   const MadnlpCNumericIn* in = madnlp_c_input(solver);
   std::copy(x0,x0+2,in->x0);
@@ -119,11 +117,7 @@ int main(int argc, char** argv) {
   std::copy(out->mul_L,out->mul_L+nw,mul_L.begin());
   std::copy(out->mul_U,out->mul_U+nw,mul_U.begin());
   obj = *(out->obj);
-  primal_feas = *(out->primal_feas);
-  dual_feas = *(out->dual_feas);
-
   const MadnlpCStats* stats = madnlp_c_get_stats(solver);
-  madnlp_int iter = *(stats->iter);
 
   cout << "sol: ";
   for (auto el: sol) cout << el << " "; cout << endl;
@@ -137,9 +131,12 @@ int main(int argc, char** argv) {
   for (auto el: mul_U) cout << el << " "; cout << endl;
 
   cout << "obj: " << obj << endl;
-  cout << "primal_feas: " << primal_feas << endl;
-  cout << "dual_feas: " << dual_feas << endl;
-  cout << "iter: " << iter << endl;
+  cout << "iter: " << stats->iter << endl;
+  cout << "status: " << stats->status << endl;
+  cout << "dual_feas: " << stats->dual_feas << endl;
+  cout << "primal_feas: " << stats->primal_feas << endl;
+
+  madnlp_c_solve(solver);
 
   shutdown_julia(0);
 

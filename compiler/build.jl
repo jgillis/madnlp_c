@@ -27,6 +27,7 @@ PackageCompiler.create_library(".", target_dir;
                             incremental=false,
                             force=true,
                             filter_stdlibs=false,
+                            include_lazy_artifacts=true,
                             header_files = [joinpath(src_dir, "madnlp_c.h")],
                             version=version,
                             compat_level=compatibility,

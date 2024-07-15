@@ -1,0 +1,3 @@
+[submodule "MadNLP.jl"]
+	path = MadNLP.jl
+	url = git@github.com:tmmsartor/MadNLP.jl.git

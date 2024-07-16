@@ -121,7 +121,7 @@ primal_feas::Vector{Float64} = []
 dual_feas::Vector{Float64}   = []
 
 
-cases::Vector{Tuple{Int,Int,Int}} = [(0,3,10)]
+cases::Vector{Tuple{Int,Int,Int}} = [(0,3,10),(1,3,10),(2,3,10)]
 # cases::Vector{Tuple{Int,Int,Int}} = [(0,3,10),(2,2,1000),(1,1,1000),(0,0,1000)]
 for (lin_solver_id,print_level, max_iters) in cases
 	nlp_interface = MadnlpCInterface(

@@ -136,6 +136,8 @@ int main(int argc, char** argv) {
 
   madnlp_c_solve(solver);
 
+  madnlp_c_destroy(solver);
+
   shutdown_julia(0);
 
   return 0;

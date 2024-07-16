@@ -129,7 +129,7 @@ mutable struct MadnlpCSolver
 end
 
 
-ref_store::Dict{Ptr{MadnlpCSolver},Ref{MadnlpCSolver}} = Dict()
+ref_store::Dict{Ptr{MadnlpCSolver},Union{Ref{MadnlpCSolver},Nothing}} = Dict()
 
 
 
@@ -579,7 +579,8 @@ end
 
 
 Base.@ccallable function madnlp_c_destroy(s::Ptr{MadnlpCSolver})::Cvoid
-  delete!(ref_store, s)
+  ref_store[s] = nothing
+  GC.gc()
 end
 
 end # module MadNLP_C

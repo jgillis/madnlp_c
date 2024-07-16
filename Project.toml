@@ -1,10 +1,11 @@
-authors = ["Tommaso Sartor <tmmsartor@protonmail.com>", "Joris Gillis <joris@yacoda.com>"]
 name = "MadNLP_C"
 uuid = "809fdad6-fa7d-470e-b0f3-59f70ed6c6e6"
+authors = ["Tommaso Sartor <tmmsartor@protonmail.com>", "Joris Gillis <joris@yacoda.com>"]
 version = "0.1.0"
 
 [deps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+CUDA_Runtime_jll = "76a88914-d11a-5bdc-97e0-2f5a05c973a2"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 MadNLP = "2621e9c9-9eb4-46b1-8089-e8c72242dfb6"
 MadNLPGPU = "d72a61cc-809d-412f-99be-fd81f4b8a598"

@@ -33,6 +33,8 @@ jobs:
       - run: |
               julia --startup-file=no --project=. -e 'using Pkg; Pkg.instantiate()'
               julia --startup-file=no --project=compiler -e 'using Pkg; Pkg.instantiate()'
+              julia --startup-file=no --project=. -e 'using CUDA; CUDA.set_runtime_version!(v"12.5.0")'
+              julia --startup-file=no --project=. -e 'using CUDA;'
               julia --startup-file=no --project=compiler compiler/build.jl foo
       # Upload as release asset
       - uses: vimtor/action-zip@v1.2

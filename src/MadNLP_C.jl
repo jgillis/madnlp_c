@@ -89,8 +89,6 @@ mutable struct MadnlpCNumericOut
   mul::Ptr{Cdouble}
   mul_L::Ptr{Cdouble}
   mul_U::Ptr{Cdouble}
-  primal_feas::Ptr{Cdouble}
-  dual_feas::Ptr{Cdouble}
   MadnlpCNumericOut() = new()
 end
 
@@ -114,10 +112,18 @@ mutable struct MadnlpCSolver
   stats_c::MadnlpCStats
   in::MadnlpCNumericIn{Vector{Float64}}
 
-  nzj_i::Array{Int64}
-  nzj_j::Array{Int64}
-  nzh_i::Array{Int64}
-  nzh_j::Array{Int64}
+  nzj_i::Vector{Int64}
+  nzj_j::Vector{Int64}
+  nzh_i::Vector{Int64}
+  nzh_j::Vector{Int64}
+
+  solution::Vector{Float64}
+  objective::Float64
+  constraints::Vector{Float64}
+  multipliers::Vector{Float64}
+  multipliers_L::Vector{Float64}
+  multipliers_U::Vector{Float64}
+
   MadnlpCSolver() = new()
 end
 
@@ -272,7 +278,7 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
   solver.nlp_interface = unsafe_load(nlp_interface)
   solver.lin_solver_id = 0
   solver.max_iters = 3000
-  solver.print_level = 5
+  solver.print_level = 3
   solver.minimize = true
 
   interf = solver.nlp_interface
@@ -298,30 +304,22 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
   solver.stats_c = MadnlpCStats()
 
   # nzj_i may not be properly aligned, so copying is neededs
-  solver.nzj_i = Array{Int64}(undef, interf.nnzj)
-  solver.nzj_j = Array{Int64}(undef, interf.nnzj)
-  solver.nzh_i = Array{Int64}(undef, interf.nnzh)
-  solver.nzh_j = Array{Int64}(undef, interf.nnzh)
+  solver.nzj_i = Vector{Int64}(undef, interf.nnzj)
+  solver.nzj_j = Vector{Int64}(undef, interf.nnzj)
+  solver.nzh_i = Vector{Int64}(undef, interf.nnzh)
+  solver.nzh_j = Vector{Int64}(undef, interf.nnzh)
 
   unsafe_copyto!(Base.unsafe_convert(Ptr{Int64}, solver.nzj_i), interf.nzj_i, interf.nnzj)
   unsafe_copyto!(Base.unsafe_convert(Ptr{Int64}, solver.nzj_j), interf.nzj_j, interf.nnzj)
   unsafe_copyto!(Base.unsafe_convert(Ptr{Int64}, solver.nzh_i), interf.nzh_i, interf.nnzh)
   unsafe_copyto!(Base.unsafe_convert(Ptr{Int64}, solver.nzh_j), interf.nzh_j, interf.nnzh)
 
-  solver.res = MadNLP.MadNLPExecutionStats{Float64, Vector{Float64}}(
-    MadNLP.MadNLPOptions(tol=0, callback=MadNLP.SparseCallback, kkt_system=MadNLP.SparseKKTSystem, linear_solver=MadNLPMumps.MumpsSolver),
-    MadNLP.INTERNAL_ERROR,
-    Vector{Float64}(undef, interf.nw),
-    0.0,
-    Vector{Float64}(undef, interf.nc),
-    0.0,
-    0.0,
-    Vector{Float64}(undef, interf.nc),
-    Vector{Float64}(undef, interf.nw),
-    Vector{Float64}(undef, interf.nw),
-    0,
-    MadNLP.MadNLPCounters(start_time=0.0)
-  )
+  solver.solution = Vector{Float64}(undef, interf.nw)
+  solver.objective = 0.0
+  solver.constraints = Vector{Float64}(undef, interf.nc)
+  solver.multipliers = Vector{Float64}(undef, interf.nc)
+  solver.multipliers_L = Vector{Float64}(undef, interf.nw)
+  solver.multipliers_U = Vector{Float64}(undef, interf.nw)
 
   # Copy the solver object to the allocated memory
   unsafe_store!(solver_ptr, solver)
@@ -343,12 +341,17 @@ Base.@ccallable function madnlp_c_output(s::Ptr{MadnlpCSolver})::Ptr{MadnlpCNume
 end
 
 Base.@ccallable function madnlp_c_get_stats(s::Ptr{MadnlpCSolver})::Ptr{MadnlpCStats}
+  @info "s" s
   solver = unsafe_load(s)
 
-  solver.stats_c.iter = solver.res.iter
-  solver.stats_c.status = Integer(solver.res.status)
-  solver.stats_c.dual_feas = solver.res.dual_feas
-  solver.stats_c.primal_feas = solver.res.primal_feas
+  stuff = solver.res
+
+  @info "solver.res" stuff
+
+  #solver.stats_c.iter = solver.res.iter
+  #solver.stats_c.status = Integer(solver.res.status)
+  #solver.stats_c.dual_feas = solver.res.dual_feas
+  #solver.stats_c.primal_feas = solver.res.primal_feas
 
   return Base.unsafe_convert(Ptr{MadnlpCStats},Ref(solver.stats_c))
 end
@@ -520,6 +523,13 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
     )
   end
 
+  @info "x0" x0
+  @info "y0" y0
+  @info "lvar" lvar
+  @info "uvar" uvar
+  @info "lcon" lcon
+  @info "ucon" ucon
+
   meta = NLPModelMeta(
     nvar,
     ncon = ncon,
@@ -554,31 +564,22 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
   )
 
   madnlp_solver = MadNLPSolver(nlp; print_level = madnlp_log, linear_solver = linear_solver)
-  res = MadNLP.solve!(madnlp_solver, max_iter = Int(solver.max_iters))
-  if GPU_DEVICE
-    copyto!(solver.res.solution, res.solution)
-    solver.res.objective = res.objective
-    copyto!(solver.res.constraints, res.constraints)
-    copyto!(solver.res.multipliers, res.multipliers)
-    copyto!(solver.res.multipliers_L, res.multipliers_L)
-    copyto!(solver.res.multipliers_U, res.multipliers_U)
-    solver.res.dual_feas = res.dual_feas
-    solver.res.primal_feas = res.primal_feas
-    solver.res.counters = res.counters
-    solver.res.iter = res.iter
-    solver.res.options = res.options
-    solver.res.status = res.status
-  else
-    solver.res = res
-  end
+  solver.res = MadNLP.solve!(madnlp_solver, max_iter = Int(solver.max_iters))
+
+  copyto!(solver.solution, solver.res.solution)
+  solver.objective = solver.res.objective
+  copyto!(solver.constraints, solver.res.constraints)
+  copyto!(solver.multipliers, solver.res.multipliers)
+  copyto!(solver.multipliers_L, solver.res.multipliers_L)
+  copyto!(solver.multipliers_U, solver.res.multipliers_U)
 
   # Make results available to C
-  solver.out_c.sol = Base.unsafe_convert(Ptr{Cdouble},solver.res.solution)
-  solver.out_c.obj = Base.unsafe_convert(Ptr{Cdouble},[solver.res.objective])
-  solver.out_c.con = Base.unsafe_convert(Ptr{Cdouble},solver.res.constraints)
-  solver.out_c.mul = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers)
-  solver.out_c.mul_L = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_L)
-  solver.out_c.mul_U = Base.unsafe_convert(Ptr{Cdouble},solver.res.multipliers_U)
+  solver.out_c.sol = Base.unsafe_convert(Ptr{Cdouble},solver.solution)
+  solver.out_c.obj = Base.unsafe_convert(Ptr{Cdouble},[solver.objective])
+  solver.out_c.con = Base.unsafe_convert(Ptr{Cdouble},solver.constraints)
+  solver.out_c.mul = Base.unsafe_convert(Ptr{Cdouble},solver.multipliers)
+  solver.out_c.mul_L = Base.unsafe_convert(Ptr{Cdouble},solver.multipliers_L)
+  solver.out_c.mul_U = Base.unsafe_convert(Ptr{Cdouble},solver.multipliers_U)
 
   return 0
 

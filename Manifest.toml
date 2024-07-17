@@ -492,8 +492,8 @@ uuid = "d72a61cc-809d-412f-99be-fd81f4b8a598"
 version = "0.7.2"
 
 [[deps.MadNLPMumps]]
-deps = ["LinearAlgebra", "MUMPS_seq_jll", "MadNLP", "OpenBLAS32_jll"]
-git-tree-sha1 = "a32f32cbd0ee36becf88368ce9d1e84e9bc6a0c1"
+deps = ["LinearAlgebra", "MUMPS_seq_jll", "MadNLP", "OpenBLAS32_jll", "RelocatableFolders"]
+path = "MadNLP.jl/lib/MadNLPMumps"
 uuid = "3b83494e-c0a4-4895-918b-9157a7a085a1"
 version = "0.4.1"
 

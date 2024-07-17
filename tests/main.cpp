@@ -86,8 +86,8 @@ int main(int argc, char** argv) {
   struct MadnlpCSolver* solver = madnlp_c_create(&interf);
 
   madnlp_c_set_option_int(solver, "max_iters", 10);
-  madnlp_c_set_option_int(solver, "print_level", 0);
-  madnlp_c_set_option_int(solver, "lin_solver_id", 3);
+  madnlp_c_set_option_int(solver, "print_level", 3);
+  madnlp_c_set_option_int(solver, "lin_solver_id", 1);
 
   const MadnlpCNumericIn* in = madnlp_c_input(solver);
   std::copy(x0,x0+2,in->x0);
@@ -98,6 +98,18 @@ int main(int argc, char** argv) {
   std::copy(ubg,ubg+1,in->ubg);
 
   printf("Solving\n");
+  madnlp_c_solve(solver);
+
+  madnlp_c_set_option_int(solver, "max_iters", 10);
+  madnlp_c_set_option_int(solver, "print_level", 3);
+  madnlp_c_set_option_int(solver, "lin_solver_id", 2);
+
+  madnlp_c_solve(solver);
+
+  madnlp_c_set_option_int(solver, "max_iters", 10);
+  madnlp_c_set_option_int(solver, "print_level", 3);
+  madnlp_c_set_option_int(solver, "lin_solver_id", 0);
+
   madnlp_c_solve(solver);
 
   const MadnlpCNumericOut* out = madnlp_c_output(solver);
@@ -135,8 +147,6 @@ int main(int argc, char** argv) {
   cout << "status: " << stats->status << endl;
   cout << "dual_feas: " << stats->dual_feas << endl;
   cout << "primal_feas: " << stats->primal_feas << endl;
-
-  madnlp_c_solve(solver);
 
   shutdown_julia(0);
 

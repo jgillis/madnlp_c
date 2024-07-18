@@ -186,4 +186,6 @@ for (lin_solver_id,print_level, max_iters) in cases
 	println("mul_L: ", mul_L)
 	println("mul_U: ", mul_U)
 
+	madnlp_c_destroy(s)
+
 end

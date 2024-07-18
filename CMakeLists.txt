@@ -41,8 +41,18 @@ add_custom_command(
 )
 
 add_custom_command(
-  OUTPUT ${PROJECT_BINARY_DIR}/PackageCompiler_env_status.txt
+  OUTPUT ${PROJECT_BINARY_DIR}/MadNLP_C_parses.txt
+  DEPENDS ${PROJECT_SOURCE_DIR}/Manifest.toml
   DEPENDS ${PROJECT_BINARY_DIR}/MadNLP_env_status.txt
+  COMMAND ${Julia_EXECUTABLE} --startup-file=no --project=./ compiler/generate_precompile.jl > ${PROJECT_BINARY_DIR}/MadNLP_C_parses.txt
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  COMMENT "Parses Julia packages"
+  VERBATIM
+)
+
+add_custom_command(
+  OUTPUT ${PROJECT_BINARY_DIR}/PackageCompiler_env_status.txt
+  DEPENDS ${PROJECT_BINARY_DIR}/MadNLP_C_parses.txt
   DEPENDS ${PROJECT_SOURCE_DIR}/compiler/Manifest.toml
   COMMAND ${Julia_EXECUTABLE} --startup-file=no --project=compiler -e "using Pkg; Pkg.instantiate()"
   COMMAND ${Julia_EXECUTABLE} --startup-file=no --project=compiler -e "using Pkg; Pkg.status()" > ${PROJECT_BINARY_DIR}/PackageCompiler_env_status.txt

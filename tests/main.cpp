@@ -148,6 +148,10 @@ int main(int argc, char** argv) {
   cout << "dual_feas: " << stats->dual_feas << endl;
   cout << "primal_feas: " << stats->primal_feas << endl;
 
+  madnlp_c_solve(solver);
+
+  madnlp_c_destroy(solver);
+
   shutdown_julia(0);
 
   return 0;

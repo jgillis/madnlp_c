@@ -105,7 +105,7 @@ end
 mutable struct MadnlpCSolver
   nlp_interface::MadnlpCInterface
   lin_solver_id::Int64
-  max_iters::Int64
+  max_iter::Int64
   print_level::Int64
   minimize::Bool
   in_c::MadnlpCNumericIn{Ptr{Cdouble}}
@@ -255,9 +255,9 @@ function set_option(s::Ptr{MadnlpCSolver}, name::String, value::Any)
     if value > 5 value = 5 end
     if value < 0 value = 0 end
     s_jl.lin_solver_id = Int(value)
-  elseif name == "max_iters"
+  elseif name == "max_iter"
     if value < 0 value = 0 end
-    s_jl.max_iters = Int(value)
+    s_jl.max_iter = Int(value)
   elseif name == "minimize"
     s_jl.minimize = Bool(value)
   else
@@ -278,7 +278,7 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
   solver = MadnlpCSolver()
   solver.nlp_interface = unsafe_load(nlp_interface)
   solver.lin_solver_id = 0
-  solver.max_iters = 3000
+  solver.max_iter = 3000
   solver.print_level = 3
   solver.minimize = true
 
@@ -551,7 +551,7 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
   )
 
   madnlp_solver = MadNLPSolver(nlp; print_level = madnlp_log, linear_solver = linear_solver)
-  res = MadNLP.solve!(madnlp_solver, max_iter = Int(solver.max_iters))
+  res = MadNLP.solve!(madnlp_solver, max_iter = Int(solver.max_iter))
 
   solver.stats_c.iter = res.iter
   solver.stats_c.status = Integer(res.status)

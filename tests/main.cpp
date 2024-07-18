@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
 
   struct MadnlpCSolver* solver = madnlp_c_create(&interf);
 
-  madnlp_c_set_option_int(solver, "max_iters", 10);
+  madnlp_c_set_option_int(solver, "max_iter", 10);
   madnlp_c_set_option_int(solver, "print_level", 3);
   madnlp_c_set_option_int(solver, "lin_solver_id", 1);
 
@@ -100,13 +100,13 @@ int main(int argc, char** argv) {
   printf("Solving\n");
   madnlp_c_solve(solver);
 
-  madnlp_c_set_option_int(solver, "max_iters", 10);
+  madnlp_c_set_option_int(solver, "max_iter", 10);
   madnlp_c_set_option_int(solver, "print_level", 3);
   madnlp_c_set_option_int(solver, "lin_solver_id", 2);
 
   madnlp_c_solve(solver);
 
-  madnlp_c_set_option_int(solver, "max_iters", 10);
+  madnlp_c_set_option_int(solver, "max_iter", 10);
   madnlp_c_set_option_int(solver, "print_level", 3);
   madnlp_c_set_option_int(solver, "lin_solver_id", 0);
 

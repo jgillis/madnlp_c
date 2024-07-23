@@ -11,7 +11,7 @@ subject to   g2(x1,...,xN) == 0
 using Logging
 using Base
 
-# using MadNLP
+# using MadNLP: MadNLPExecutionStats
 using NLPModels
 
 using MadNLPMumps
@@ -595,7 +595,11 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
   )
 
   madnlp_solver = MadNLPSolver(nlp; print_level = madnlp_log, linear_solver = linear_solver)
-	res::Union{MadNLP.MadNLPExecutionStats{Float64, Vector{Float64}},Nothing} = nothing
+
+  # res::Union{MadNLPExecutionStats{Float64, CuArray{Float64}},MadNLPExecutionStats{Float64, Vector{Float64}},Nothing} = nothing;
+  # res::Union{MadNLPExecutionStats{Float64, CuArray{Float64}},MadNLPExecutionStats{Float64, Vector{Float64}},Nothing} = nothing;
+
+  local res
   try
     res = MadNLP.solve!(madnlp_solver, max_iter = Int(solver.max_iter), tol=solver.tol)
   catch e

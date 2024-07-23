@@ -19,6 +19,15 @@ using MadNLPGPU
 using CUDA
 using UnsafePointers
 
+AVAILABLE_SOLVERS = Set([
+  "mumps",
+  "umfpack",
+  "lapack_cpu",
+  "cudss",
+  "cucholesky",
+  "lapack_gpu"
+])
+
 export MadnlpCSolver, MadnlpCInterface, MadnlpCNumericIn, MadnlpCNumericOut, MadnlpCStats, madnlp_c_get_stats, madnlp_c_startup, madnlp_c_shutdown, madnlp_c_create, madnlp_c_option_type, madnlp_c_set_option_double, madnlp_c_set_option_bool, madnlp_c_set_option_int, madnlp_c_set_option_string, madnlp_c_input, madnlp_c_output, madnlp_c_solve, madnlp_c_destroy
 
 
@@ -104,8 +113,10 @@ end
 
 mutable struct MadnlpCSolver
   nlp_interface::MadnlpCInterface
-  lin_solver_id::Int64
+  linear_solver_c::Ptr{Int8}
+  linear_solver::String
   max_iter::Int64
+  tol::Float64
   print_level::Int64
   minimize::Bool
   in_c::MadnlpCNumericIn{Ptr{Cdouble}}
@@ -267,19 +278,28 @@ end
 
 function set_option(s::Ptr{MadnlpCSolver}, name::String, value::Any)
   s_jl::MadnlpCSolver = unsafe_pointer_to_objref(s)
-  if name == "print_level"
+  if name == "tol"
+    if value < 0 value = 0.0 end
+    s_jl.tol = Float64(value)
+  elseif name == "print_level"
     if value > 5 value = 5 end
     if value < 0 value = 0 end
     s_jl.print_level = Int(value)
-  elseif name == "lin_solver_id"
-    if value > 5 value = 5 end
-    if value < 0 value = 0 end
-    s_jl.lin_solver_id = Int(value)
+  elseif name == "linear_solver"
+    if !in(value, AVAILABLE_SOLVERS)
+      @warn "Linear solver $value not supported, available solver are:\n$AVAILABLE_SOLVERS"
+    else
+      s_jl.linear_solver = value
+    end
   elseif name == "max_iter"
     if value < 0 value = 0 end
     s_jl.max_iter = Int(value)
   elseif name == "minimize"
     s_jl.minimize = Bool(value)
+  # julia runtime options
+  elseif name == "trace_compile"
+  elseif name == "compile"
+  elseif name == "trace_compile_output"
   else
     @warn "Unknown option $name"
   end
@@ -297,7 +317,9 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
   # Create the solver object
   solver = MadnlpCSolver()
   solver.nlp_interface = unsafe_load(nlp_interface)
-  solver.lin_solver_id = 0
+  solver.tol = 0.0
+  solver.linear_solver = "mumps"
+  solver.linear_solver_c = Base.unsafe_convert(Ptr{Int8}, solver.linear_solver)
   solver.max_iter = 3000
   solver.print_level = 3
   solver.minimize = true
@@ -375,8 +397,11 @@ Base.@ccallable function madnlp_c_option_type(name::Ptr{Cchar})::Cint
   if n == "tol" return 0 end
   if n == "max_iter" return 1 end
   if n == "print_level" return 1 end
-  if n == "lin_solver_id" return 1 end
   if n == "minimize" return 2 end
+  if n == "trace_compile" return 2 end
+  if n == "compile" return 3 end
+  if n == "linear_solver" return 3 end
+  if n == "trace_compile_output" return 3 end
   return -1
 end
 
@@ -384,6 +409,7 @@ Base.@ccallable function madnlp_c_set_option_double(s::Ptr{MadnlpCSolver}, name:
   try
     set_option(s, unsafe_string(name), val)
   catch e
+    @warn e
     return 1
   end
   return 0
@@ -393,6 +419,7 @@ Base.@ccallable function madnlp_c_set_option_bool(s::Ptr{MadnlpCSolver}, name::P
   try
     set_option(s, unsafe_string(name), val)
   catch e
+    @warn e
     return 1
   end
   return 0
@@ -402,6 +429,7 @@ Base.@ccallable function madnlp_c_set_option_int(s::Ptr{MadnlpCSolver}, name::Pt
   try
     set_option(s, unsafe_string(name), val)
   catch e
+    @warn e
     return 1
   end
   return 0
@@ -411,6 +439,7 @@ Base.@ccallable function madnlp_c_set_option_string(s::Ptr{MadnlpCSolver}, name:
   try
     set_option(s, unsafe_string(name), unsafe_string(val))
   catch e
+    @warn e
     return 1
   end
   return 0
@@ -462,34 +491,29 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
 
   GPU_DEVICE::Bool = false
 
-
   nzj_i = solver.nzj_i
   nzj_j = solver.nzj_j
   nzh_i = solver.nzh_i
   nzh_j = solver.nzh_j
 
-  lin_solver_name = "none"
-  if solver.lin_solver_id == 0
-    lin_solver_name = "mumps"
+  linear_solver = nothing
+  if solver.linear_solver == "mumps"
     linear_solver = MadNLPMumps.MumpsSolver
-  elseif solver.lin_solver_id == 1
-    lin_solver_name = "umfpack"
+  elseif solver.linear_solver == "umfpack"
     linear_solver = UmfpackSolver
-  elseif solver.lin_solver_id == 2
-    lin_solver_name = "lapackCPU"
+  elseif solver.linear_solver == "lapack_cpu"
     linear_solver = LapackCPUSolver
-  elseif solver.lin_solver_id == 3
-    lin_solver_name = "CUDSSS"
+  elseif solver.linear_solver == "cudss"
     linear_solver = MadNLPGPU.CUDSSSolver
     GPU_DEVICE = true
-  elseif solver.lin_solver_id == 4
-    lin_solver_name = "lapackGPU"
+  elseif solver.linear_solver == "lapack_gpu"
     linear_solver = MadNLPGPU.LapackGPUSolver
     GPU_DEVICE = true
-  elseif solver.lin_solver_id == 5
-    lin_solver_name = "CuCholesky"
+  elseif solver.linear_solver == "cucholesky"
     linear_solver = MadNLPGPU.CuCholeskySolver
     GPU_DEVICE = true
+  else
+    @warn "$(solver.linear_solver) not available"
   end
 
   buffers = nothing

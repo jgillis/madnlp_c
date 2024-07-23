@@ -101,15 +101,6 @@ user_data::Ptr{Cvoid} = 0
 
 # pre compile for different solvers
 
-lin_solver_names = Dict(
-	0=>"mumps",
-	1=>"ufpack",
-	2=>"lapackCPUsolver",
-	3=>"CSSDU",
-	4=>"LapackGPUSolver",
-	5=>"CuCholeskySolver",
-)
-
 sol::Vector{Float64}         = []
 obj::Vector{Float64}         = []
 con::Vector{Float64}         = []
@@ -121,9 +112,12 @@ primal_feas::Vector{Float64} = []
 dual_feas::Vector{Float64}   = []
 
 
-cases::Vector{Tuple{Int,Int,Int}} = [(0,3,10),(1,3,10),(2,3,10)]
-# cases::Vector{Tuple{Int,Int,Int}} = [(0,3,10),(2,2,1000),(1,1,1000),(0,0,1000)]
-for (lin_solver_id,print_level, max_iter) in cases
+cases::Vector{Tuple{String,Int,Int,Float64}} = [
+	("umfpack",3,10,1e-6),
+  ("mumps",3,10,1e-4),
+  ("lapack_cpu",3,100,1e-8)
+]
+for (linear_solver,print_level, max_iter, tol) in cases
 	nlp_interface = MadnlpCInterface(
 		@cfunction(eval_f,Cint,(Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid})),
 		@cfunction(eval_g,Cint,(Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid})),
@@ -156,7 +150,9 @@ for (lin_solver_id,print_level, max_iter) in cases
 	copyto!(unsafe_wrap(Array, in_c.lbg, (ncon,)), lbg)
 	copyto!(unsafe_wrap(Array, in_c.ubg, (ncon,)), ubg)
 	
-	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"lin_solver_id"), lin_solver_id)
+	madnlp_c_set_option_double(s, unsafe_convert(Ptr{Int8},"tol"), tol)
+	madnlp_c_set_option_string(s, unsafe_convert(Ptr{Int8},"linear_solver"), unsafe_convert(Ptr{Int8},linear_solver))
+
 	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"max_iter"), max_iter)
 	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"print_level"), print_level)
 	madnlp_c_set_option_bool(s, unsafe_convert(Ptr{Int8},"minimize"), Int64(minimize))
@@ -176,8 +172,7 @@ for (lin_solver_id,print_level, max_iter) in cases
 	global mul_L = unsafe_wrap(Array, out_c.mul_L, nvar)
 	global mul_U = unsafe_wrap(Array, out_c.mul_U, nvar)
 
-	println("ret_code: ", Cret)
-	println("linear_solver: ", lin_solver_names[lin_solver_id])
+	println("linear_solver: ", unsafe_pointer_to_objref(s).linear_solver)
 
   println("obj: ", obj[1])
 	println("sol: ", sol)

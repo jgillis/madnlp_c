@@ -85,10 +85,6 @@ int main(int argc, char** argv) {
 
   struct MadnlpCSolver* solver = madnlp_c_create(&interf);
 
-  madnlp_c_set_option_int(solver, "max_iter", 10);
-  madnlp_c_set_option_int(solver, "print_level", 3);
-  madnlp_c_set_option_int(solver, "lin_solver_id", 1);
-
   const MadnlpCNumericIn* in = madnlp_c_input(solver);
   std::copy(x0,x0+2,in->x0);
   std::copy(l0,l0+1,in->l0);
@@ -97,18 +93,24 @@ int main(int argc, char** argv) {
   std::copy(lbg,lbg+1,in->lbg);
   std::copy(ubg,ubg+1,in->ubg);
 
-  printf("Solving\n");
+  madnlp_c_set_option_int(solver, "max_iter", 10);
+  madnlp_c_set_option_int(solver, "print_level", 3);
+  madnlp_c_set_option_double(solver, "tol", 1e-4);
+  madnlp_c_set_option_string(solver, "linear_solver", "mumps");
+
+  madnlp_c_solve(solver);
+
+  madnlp_c_set_option_int(solver, "max_iter", 100);
+  madnlp_c_set_option_int(solver, "print_level", 3);
+  madnlp_c_set_option_double(solver, "tol", 1e-6);
+  madnlp_c_set_option_string(solver, "linear_solver", "umfpack");
+
   madnlp_c_solve(solver);
 
   madnlp_c_set_option_int(solver, "max_iter", 10);
   madnlp_c_set_option_int(solver, "print_level", 3);
-  madnlp_c_set_option_int(solver, "lin_solver_id", 2);
-
-  madnlp_c_solve(solver);
-
-  madnlp_c_set_option_int(solver, "max_iter", 10);
-  madnlp_c_set_option_int(solver, "print_level", 3);
-  madnlp_c_set_option_int(solver, "lin_solver_id", 0);
+  madnlp_c_set_option_double(solver, "tol", 1e-8);
+  madnlp_c_set_option_string(solver, "linear_solver", "lapack_cpu");
 
   madnlp_c_solve(solver);
 
@@ -147,8 +149,6 @@ int main(int argc, char** argv) {
   cout << "status: " << stats->status << endl;
   cout << "dual_feas: " << stats->dual_feas << endl;
   cout << "primal_feas: " << stats->primal_feas << endl;
-
-  madnlp_c_solve(solver);
 
   madnlp_c_destroy(solver);
 

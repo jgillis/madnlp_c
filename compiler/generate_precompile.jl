@@ -1,6 +1,7 @@
 using MadNLP_C
 using Base: unsafe_convert
 using Logging
+using CUDA
 
 logger = ConsoleLogger(stderr, Logging.Warn)
 global_logger(logger)
@@ -111,12 +112,16 @@ iter::Vector{Int64}          = []
 primal_feas::Vector{Float64} = []
 dual_feas::Vector{Float64}   = []
 
-
 cases::Vector{Tuple{String,Int,Int,Float64}} = [
-	("umfpack",3,10,1e-6),
-  ("mumps",3,10,1e-4),
-  ("lapack_cpu",3,100,1e-8)
+   ("umfpack",3,10,1e-6),
+   ("mumps",3,10,1e-4),
+   ("lapack_cpu",3,100,1e-8),
 ]
+
+if CUDA.functional()
+  push!(cases,("cudss",3,1000,1e-4))
+end
+
 for (linear_solver,print_level, max_iter, tol) in cases
 	nlp_interface = MadnlpCInterface(
 		@cfunction(eval_f,Cint,(Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid})),

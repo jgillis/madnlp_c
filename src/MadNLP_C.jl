@@ -279,7 +279,7 @@ end
 function set_option(s::Ptr{MadnlpCSolver}, name::String, value::Any)
   s_jl::MadnlpCSolver = unsafe_pointer_to_objref(s)
   if name == "tol"
-    if value < 0 value = 0.0 end
+    if value <= 1e-15 value = 1e-15 end
     s_jl.tol = Float64(value)
   elseif name == "print_level"
     if value > 5 value = 5 end
@@ -317,7 +317,7 @@ Base.@ccallable function madnlp_c_create(nlp_interface::Ptr{MadnlpCInterface})::
   # Create the solver object
   solver = MadnlpCSolver()
   solver.nlp_interface = unsafe_load(nlp_interface)
-  solver.tol = 0.0
+  solver.tol = 1e-8
   solver.linear_solver = "mumps"
   solver.linear_solver_c = Base.unsafe_convert(Ptr{Int8}, solver.linear_solver)
   solver.max_iter = 3000

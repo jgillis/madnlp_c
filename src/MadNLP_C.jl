@@ -147,7 +147,9 @@ function NLPModels.obj(nlp::GenericModel, x::AbstractVector)
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, x)
   Cf::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.obj)
   ret::Cint = ccall(nlp.eval_f, Cint, (Ptr{Cdouble},Ptr{Cdouble}, Ptr{Cvoid}), Cx, Cf, nlp.user_data)
-  if Bool(ret) @error "function call failed" end
+  if Bool(ret)
+     throw(Exception("CallbackError eval_f"))
+  end
   return  nlp.obj[1]
 end
 
@@ -156,7 +158,9 @@ function NLPModels.obj(nlp::GenericModel, x::CuArray)
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.x)
   Cf::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.obj)
   ret::Cint = ccall(nlp.eval_f, Cint, (Ptr{Cdouble},Ptr{Cdouble}, Ptr{Cvoid}), Cx, Cf, nlp.user_data)
-  if Bool(ret) @error "function call failed" end
+  if Bool(ret)
+     throw(Exception("CallbackError eval_f"))
+  end
   return nlp.obj[1]
 end
 
@@ -164,7 +168,9 @@ function NLPModels.cons!(nlp::GenericModel, x::AbstractVector, c::AbstractVector
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, x)
   Cc::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, c)
   ret::Cint = ccall(nlp.eval_g, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, Cc, nlp.user_data)
-  if Bool(ret) @error "function call failed" end
+  if Bool(ret)
+     throw(Exception("CallbackError eval_cons"))
+  end
   return c
 end
 
@@ -173,7 +179,9 @@ function NLPModels.cons!(nlp::GenericModel, x::CuArray, c::CuArray)
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.x)
   Cc::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.cons)
   ret::Cint = ccall(nlp.eval_g, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, Cc, nlp.user_data)
-  if Bool(ret) @error "GPU cons failed" end
+  if Bool(ret)
+     throw(Exception("CallbackError eval_cons"))
+  end
   copyto!(c, nlp.bf.cons)
   return c
 end
@@ -182,7 +190,9 @@ function NLPModels.grad!(nlp::GenericModel, x::AbstractVector, g::AbstractVector
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, x)
   Cg::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, g)
   ret::Cint = ccall(nlp.eval_grad_f, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, Cg, nlp.user_data)
-  if Bool(ret) @error "function call failed" end
+  if Bool(ret)
+     throw(Exception("CallbackError eval_grad_f"))
+  end
   # g = unsafe_wrap(Array, Cg, nlp.meta.nnzo)
   return g
 end
@@ -192,7 +202,9 @@ function NLPModels.grad!(nlp::GenericModel, x::CuArray, g::CuArray)
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.x)
   Cg::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.grad_f)
   ret::Cint = ccall(nlp.eval_grad_f, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, Cg, nlp.user_data)
-  if Bool(ret) @error "GPU grad failed" end
+  if Bool(ret)
+     throw(Exception("CallbackError eval_grad_f"))
+  end
   copyto!(g, nlp.bf.grad_f)
   return g
 end
@@ -201,7 +213,9 @@ function NLPModels.jac_coord!(nlp::GenericModel, x::AbstractVector, J::AbstractV
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, x)
   CJ::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, J)
   ret::Cint = ccall(nlp.eval_jac_g, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, CJ, nlp.user_data)
-  if Bool(ret) @error "function call failed" end
+  if Bool(ret)
+     throw(Exception("CallbackError eval_jac_g"))
+  end
   J = unsafe_wrap(Array, CJ, nlp.meta.nnzj)
   return J
 end
@@ -211,7 +225,9 @@ function NLPModels.jac_coord!(nlp::GenericModel, x::CuArray, J::CuArray)
   Cx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.x)
   CJ::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, nlp.bf.jac_g)
   ret::Cint = ccall(nlp.eval_jac_g, Cint, (Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid}), Cx, CJ, nlp.user_data)
-  if Bool(ret) @error "GPU jac failed" end
+  if Bool(ret)
+     throw(Exception("CallbackError eval_jac_g"))
+  end
   copyto!(J, nlp.bf.jac_g)
   return J
 end
@@ -224,7 +240,9 @@ function NLPModels.hess_coord!(nlp::GenericModel, x::AbstractVector, y::Abstract
   ret::Cint = ccall(nlp.eval_h, Cint,
                     (Float64, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cvoid}),
                     obj_weight, Cx, Cy, CH, nlp.user_data)
-  if Bool(ret) @error "function call failed" end
+  if Bool(ret)
+     throw(Exception("CallbackError eval_hess_l"))
+  end
   H = unsafe_wrap(Array, CH, nlp.meta.nnzh)
   return H
 end
@@ -239,7 +257,9 @@ function NLPModels.hess_coord!(nlp::GenericModel, x::CuArray, y::CuArray, H::CuA
   ret::Cint = ccall(nlp.eval_h, Cint,
                     (Float64, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cvoid}),
                     obj_weight, Cx, Cy, CH, nlp.user_data)
-  if Bool(ret) @error "GPU hess failed" end
+  if Bool(ret)
+     throw(Exception("CallbackError eval_hess_l"))
+  end
   copyto!(H, nlp.bf.hess_l)
   return H
 end
@@ -551,7 +571,13 @@ Base.@ccallable function madnlp_c_solve(s::Ptr{MadnlpCSolver})::Cint
   )
 
   madnlp_solver = MadNLPSolver(nlp; print_level = madnlp_log, linear_solver = linear_solver)
-  res = MadNLP.solve!(madnlp_solver, max_iter = Int(solver.max_iter))
+	res::Union{MadNLP.MadNLPExecutionStats{Float64, Vector{Float64}},Nothing} = nothing
+  try
+    res = MadNLP.solve!(madnlp_solver, max_iter = Int(solver.max_iter), tol=solver.tol)
+  catch e
+    @error e
+    return 1
+  end
 
   solver.stats_c.iter = res.iter
   solver.stats_c.status = Integer(res.status)

@@ -5,7 +5,8 @@ message(CHECK_START "Check Julia Executable")
 set(JULIA_EXECUTABLE "julia" CACHE STRING "Julia executable default")
 if (JULIA_EXECUTABLE STREQUAL "julia")
   execute_process(
-    COMMAND echo -n $(which julia)
+    COMMAND which julia
+    OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE JULIA_EXECUTABLE_PARSED
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   )

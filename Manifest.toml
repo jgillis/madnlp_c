@@ -109,15 +109,15 @@ version = "0.14.1+0"
 
 [[deps.CUDSS]]
 deps = ["CEnum", "CUDA", "CUDSS_jll", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "2ddfb9e1bab8cd6a049c4bd0bc0f5f7d91640e9c"
+git-tree-sha1 = "dcb28fb99501ce47c7a4e25e5fdf94b0e8dfa749"
 uuid = "45b445bb-4962-46a0-9369-b4df9d0f772e"
-version = "0.1.6"
+version = "0.3.1"
 
 [[deps.CUDSS_jll]]
 deps = ["Artifacts", "CUDA_Runtime_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "TOML"]
-git-tree-sha1 = "7d82cd3ec956d1dc36bdb1887561112fa1b10df7"
+git-tree-sha1 = "b4c1defa52f8806ac674ac72c793e9b5599c6e81"
 uuid = "4889d778-9329-5762-9fec-0578a5d30366"
-version = "0.1.0+0"
+version = "0.3.0+0"
 
 [[deps.CUSOLVERRF]]
 deps = ["CUDA", "KLU", "LinearAlgebra", "SparseArrays"]
@@ -259,9 +259,9 @@ uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[deps.GPUArrays]]
 deps = ["Adapt", "GPUArraysCore", "LLVM", "LinearAlgebra", "Printf", "Random", "Reexport", "Serialization", "Statistics"]
-git-tree-sha1 = "04661708f5301394a1f1be86a07a89e835900db6"
+git-tree-sha1 = "a74c3f1cf56a3dfcdef0605f8cdb7015926aae30"
 uuid = "0c68f7d7-f131-5f86-a1c3-88cf8149b2d7"
-version = "10.2.3"
+version = "10.3.0"
 
 [[deps.GPUArraysCore]]
 deps = ["Adapt"]
@@ -479,7 +479,7 @@ version = "0.5.13"
 deps = ["LDLFactorizations", "LinearAlgebra", "Logging", "NLPModels", "Pkg", "Printf", "RelocatableFolders", "SolverCore", "SparseArrays", "SuiteSparse"]
 path = "MadNLP.jl"
 uuid = "2621e9c9-9eb4-46b1-8089-e8c72242dfb6"
-version = "0.8.3"
+version = "0.8.4"
 weakdeps = ["MathOptInterface"]
 
     [deps.MadNLP.extensions]
@@ -487,9 +487,9 @@ weakdeps = ["MathOptInterface"]
 
 [[deps.MadNLPGPU]]
 deps = ["AMD", "CUDA", "CUDSS", "CUSOLVERRF", "KernelAbstractions", "LinearAlgebra", "MadNLP", "MadNLPTests", "Metis", "SparseArrays"]
-git-tree-sha1 = "ddb1981f1c7a2ba78e480d4d210353133b013d98"
+git-tree-sha1 = "542846a6ecbaa6cbd7f3dbc6f86301b82b934a78"
 uuid = "d72a61cc-809d-412f-99be-fd81f4b8a598"
-version = "0.7.2"
+version = "0.7.3"
 
 [[deps.MadNLPMumps]]
 deps = ["LinearAlgebra", "MUMPS_seq_jll", "MadNLP", "OpenBLAS32_jll", "RelocatableFolders"]
@@ -817,9 +817,9 @@ uuid = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 version = "0.5.24"
 
 [[deps.TranscodingStreams]]
-git-tree-sha1 = "60df3f8126263c0d6b357b9a1017bb94f53e3582"
+git-tree-sha1 = "96612ac5365777520c3c5396314c8cf7408f436a"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
-version = "0.11.0"
+version = "0.11.1"
 weakdeps = ["Random", "Test"]
 
     [deps.TranscodingStreams.extensions]

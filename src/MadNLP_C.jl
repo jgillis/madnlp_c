@@ -634,7 +634,7 @@ end
 
 Base.@ccallable function madnlp_c_destroy(s::Ptr{MadnlpCSolver})::Cvoid
   ref_store[s] = nothing
-  GC.gc()
+  #GC.gc()
 end
 
 end # module MadNLP_C

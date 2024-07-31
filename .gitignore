@@ -1,0 +1,5 @@
+build/
+.ccls-cache
+compile_commands.json
+.*.sw[a-z]
+target/

@@ -1,22 +1,17 @@
 using MadNLP_C
-using Base
+using Base: unsafe_convert
 using Logging
+using CUDA
 
 logger = ConsoleLogger(stderr, Logging.Warn)
 global_logger(logger)
 
 
-const nvar::UInt64 = 2
-const ncon::UInt64 = 1
+const nvar::Int64 = 2
+const ncon::Int64 = 1
 
 a::Float64 = 1.0
 b::Float64 = 100.0
-
-const x0::Vector{Float64} = [1.0, 1.0]
-const y0::Vector{Float64} = ones(ncon)
-
-Cx0::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble},x0)
-Cy0::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble},y0)
 
 function _eval_f!(w::Vector{T}, f::Vector{T}) where T
 	f[1] = (a-w[1])^2 + b*(w[2]-w[1]^2)^2
@@ -61,7 +56,7 @@ function eval_grad_f(Cw::Ptr{Cdouble},Cgrad::Ptr{Cdouble}, d::Ptr{Cvoid})::Cint
 	grad::Vector{Float64} = unsafe_wrap(Array, Cgrad, nnzo)
   _eval_grad_f!(w,grad)
 	@debug "grad-callback" grad
-	# Cgrad::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, grad)
+	# Cgrad::Ptr{Cdouble} = unsafe_convert(Ptr{Cdouble}, grad)
 	return 0
 end
 
@@ -80,69 +75,54 @@ function eval_h(obj_scale::Cdouble, Cw::Ptr{Cdouble}, Cl::Ptr{Cdouble}, Chess::P
 	return 0
 end
 
-nnzo::Csize_t = 2
-nnzj::Csize_t = 2
-nnzh::Csize_t = 3
-nzj_i = Csize_t[1,1]
-nzj_j = Csize_t[1,2]
-nzh_i = Csize_t[1,1,2]
-nzh_j = Csize_t[1,2,2]
-lbx = Cdouble[-Inf, -Inf]
-ubx = Cdouble[ Inf,  Inf]
-lbg = Cdouble[0.0]
-ubg = Cdouble[0.0]
+nnzo::Int64 = 2
+nnzj::Int64 = 2
+nnzh::Int64 = 3
 
-Cnzj_i::Ptr{Csize_t} = Base.unsafe_convert(Ptr{Csize_t}, nzj_i)
-Cnzj_j::Ptr{Csize_t} = Base.unsafe_convert(Ptr{Csize_t}, nzj_j)
-Cnzh_i::Ptr{Csize_t} = Base.unsafe_convert(Ptr{Csize_t}, nzh_i)
-Cnzh_j::Ptr{Csize_t} = Base.unsafe_convert(Ptr{Csize_t}, nzh_j)
-Clbx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, lbx)
-Cubx::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, ubx)
-Clbg::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, lbg)
-Cubg::Ptr{Cdouble} = Base.unsafe_convert(Ptr{Cdouble}, ubg)
+nzj_i = Int64[1,1]
+nzj_j = Int64[1,2]
+nzh_i = Int64[1,1,2]
+nzh_j = Int64[1,2,2]
+Cnzj_i::Ptr{Int64} = pointer(nzj_i)
+Cnzj_j::Ptr{Int64} = pointer(nzj_j)
+Cnzh_i::Ptr{Int64} = pointer(nzh_i)
+Cnzh_j::Ptr{Int64} = pointer(nzh_j)
 
-max_iters::Csize_t = 1000
-print_level::Csize_t = 3
+x0::Vector{Float64} = [1.0, 1.0]
+y0::Vector{Float64} = [1.0]
+lbx::Vector{Float64} = [-Inf, -Inf]
+ubx::Vector{Float64} = [ Inf,  Inf]
+lbg::Vector{Float64} = [0.0]
+ubg::Vector{Float64} = [0.0]
+
+max_iter::Int64 = 1000
+print_level::Int64 = 3
 minimize::Bool = true
 user_data::Ptr{Cvoid} = 0
 
-sol = zeros(nvar)
-Csol::Ptr{Cdouble} = pointer(sol)
-obj = zeros(1)
-Cobj::Ptr{Cdouble} = pointer(obj)
-con = zeros(ncon)
-Ccon::Ptr{Cdouble} = pointer(con)
-
-primal_feas = zeros(1)
-Cprimal_feas::Ptr{Cdouble} = pointer(primal_feas)
-
-dual_feas = zeros(1)
-Cdual_feas::Ptr{Cdouble} = pointer(dual_feas)
-
-mul = zeros(ncon)
-Cmul::Ptr{Cdouble} = pointer(mul)
-
-mul_L = zeros(nvar)
-mul_U = zeros(nvar)
-Cmul_L::Ptr{Cdouble} = pointer(mul_L)
-Cmul_U::Ptr{Cdouble} = pointer(mul_U)
-
-iter::Vector{Int} = [1,]
-Citer::Ptr{Csize_t} = pointer(iter)
-
 # pre compile for different solvers
 
-lin_solver_names = Dict(
-	0=>"mumps",
-	1=>"ufpack",
-	2=>"lapackCPUsolver",
-	3=>"CSSDU",
-	4=>"LapackGPUSolver",
-	5=>"CuCholeskySolver",
-)
-cases::Vector{Pair{UInt64,Csize_t}} = [0=>3,1=>3,5=>3,3=>0]
-for (lin_solver_id,print_level) in cases
+sol::Vector{Float64}         = []
+obj::Vector{Float64}         = []
+con::Vector{Float64}         = []
+mul::Vector{Float64}         = []
+mul_L::Vector{Float64}       = []
+mul_U::Vector{Float64}       = []
+iter::Vector{Int64}          = []
+primal_feas::Vector{Float64} = []
+dual_feas::Vector{Float64}   = []
 
+cases::Vector{Tuple{String,Int,Int,Float64}} = [
+   ("umfpack",3,10,1e-6),
+   ("mumps",3,10,1e-4),
+   ("lapack_cpu",3,100,1e-8),
+]
+
+if CUDA.functional()
+  push!(cases,("cudss",3,1000,1e-4))
+end
+
+for (linear_solver,print_level, max_iter, tol) in cases
 	nlp_interface = MadnlpCInterface(
 		@cfunction(eval_f,Cint,(Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid})),
 		@cfunction(eval_g,Cint,(Ptr{Cdouble},Ptr{Cdouble},Ptr{Cvoid})),
@@ -161,41 +141,51 @@ for (lin_solver_id,print_level) in cases
 		user_data
 	)
 
-    s = madnlp_c_create(Base.unsafe_convert(Ptr{MadnlpCInterface}, pointer_from_objref(nlp_interface)))
+	s = madnlp_c_create(unsafe_convert(Ptr{MadnlpCInterface}, pointer_from_objref(nlp_interface)))
 
-	inp = MadnlpCNumericIn(Cx0,Cy0,Clbx,Cubx,Clbg,Cubg)
-
-	@info "lbx" inp.lbx
 	out = MadnlpCNumericOut()
 
-	println(out.sol)
+	in_c_ptr = madnlp_c_input(s)
+	in_c = unsafe_load(in_c_ptr)
 
-	#madnlp_c_set_option_int(s, "lin_solver_id", lin_solver_id)
-	#madnlp_c_set_option_int(s, "max_iters", max_iters)
-	#madnlp_c_set_option_int(s, "print_level", print_level)
-	#madnlp_c_set_option_bool(s, "minimize", minimize)
+	copyto!(unsafe_wrap(Array, in_c.x0, (nvar,)), x0)
+	copyto!(unsafe_wrap(Array, in_c.l0, (ncon,)),  y0)
+	copyto!(unsafe_wrap(Array, in_c.lbx, (nvar,)), lbx)
+	copyto!(unsafe_wrap(Array, in_c.ubx, (nvar,)), ubx)
+	copyto!(unsafe_wrap(Array, in_c.lbg, (ncon,)), lbg)
+	copyto!(unsafe_wrap(Array, in_c.ubg, (ncon,)), ubg)
+	
+	madnlp_c_set_option_double(s, unsafe_convert(Ptr{Int8},"tol"), tol)
+	madnlp_c_set_option_string(s, unsafe_convert(Ptr{Int8},"linear_solver"), unsafe_convert(Ptr{Int8},linear_solver))
 
-	Cret = madnlp_c_solve(s,
-					Base.unsafe_convert(Ptr{MadnlpCNumericIn}, pointer_from_objref(inp)),
-					Base.unsafe_convert(Ptr{MadnlpCNumericOut}, pointer_from_objref(out)))
+	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"max_iter"), max_iter)
+	madnlp_c_set_option_int(s, unsafe_convert(Ptr{Int8},"print_level"), print_level)
+	madnlp_c_set_option_bool(s, unsafe_convert(Ptr{Int8},"minimize"), Int64(minimize))
 
+	Cret = madnlp_c_solve(s)
 
-	@info "sol" out.sol
-	sol_out::Vector{Float64} = unsafe_wrap(Array, out.sol, nvar)
-	obj_out::Vector{Float64} = unsafe_wrap(Array, out.obj, ncon)
-	con_out::Vector{Float64} = unsafe_wrap(Array, out.con, ncon)
-	mul_out::Vector{Float64} = unsafe_wrap(Array, out.mul, ncon)
-	mull_out::Vector{Float64} = unsafe_wrap(Array, out.mul_L, nvar)
-	mulu_out::Vector{Float64} = unsafe_wrap(Array, out.mul_U, nvar)
+	out_c_ptr = madnlp_c_output(s)
+	out_c = unsafe_load(out_c_ptr)
 
-	println("ret_code: ", Cret)
+	stats_c_ptr = madnlp_c_get_stats(s)
+	stats_c = unsafe_load(stats_c_ptr)
 
-	println("linear_solver: ", lin_solver_names[lin_solver_id])
-	println("sol: ", sol_out)
-	println("con: ", con_out)
-	println("obj: ", obj_out[1])
-	println("mul: ", mul_out)
-	println("mul_L: ", mull_out)
-	println("mul_U: ", mulu_out)
+	global sol = unsafe_wrap(Array, out_c.sol, nvar)
+	global obj = unsafe_wrap(Array, out_c.obj, ncon)
+	global con = unsafe_wrap(Array, out_c.con, ncon)
+	global mul = unsafe_wrap(Array, out_c.mul, ncon)
+	global mul_L = unsafe_wrap(Array, out_c.mul_L, nvar)
+	global mul_U = unsafe_wrap(Array, out_c.mul_U, nvar)
+
+	println("linear_solver: ", unsafe_pointer_to_objref(s).linear_solver)
+
+  println("obj: ", obj[1])
+	println("sol: ", sol)
+	println("con: ", con)
+	println("mul: ", mul)
+	println("mul_L: ", mul_L)
+	println("mul_U: ", mul_U)
+
+	madnlp_c_destroy(s)
 
 end

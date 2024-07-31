@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
 project_hash = "9ddee98f4175ce3934d72d17e69fc38f7697d471"
 
@@ -88,9 +88,11 @@ version = "1.2.0"
 
 [[deps.PackageCompiler]]
 deps = ["Artifacts", "Glob", "LazyArtifacts", "Libdl", "Pkg", "Printf", "RelocatableFolders", "TOML", "UUIDs", "p7zip_jll"]
-git-tree-sha1 = "48d4429862157ad5500c4f61444db1b8c32e0a2b"
+git-tree-sha1 = "abee35bbb4be5c9c670bae87dee6a2384398cd64"
+repo-rev = "xcode-flag-fix"
+repo-url = "https://github.com/jayscook/PackageCompiler.jl"
 uuid = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
-version = "2.1.17"
+version = "2.1.18"
 
 [[deps.Pkg]]
 deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]

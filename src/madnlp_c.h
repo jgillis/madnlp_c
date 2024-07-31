@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 
-#define madnlp_int int
+#define madnlp_int long long int
 #define madnlp_real double
 
 // structs
@@ -35,14 +35,35 @@ struct MadnlpCInterface;
 typedef struct MadnlpCSolver MadnlpCSolver;
 
 // function pointer types
-typedef madnlp_int (*MadnlpCEvalObj)(const double*, double *, void*);
-typedef madnlp_int (*MadnlpCEvalConstr)(const double*, double *, void*);
-typedef madnlp_int (*MadnlpCEvalObjGrad)(const double*, double*, void*);
-typedef madnlp_int (*MadnlpCEvalConstrJac)(const double*, double*, void*);
-typedef madnlp_int (*MadnlpCEvalLagHess)(double, const double*, const double*, double*, void*);
+typedef int (*MadnlpCEvalObj)(const double*, double *, void*);
+typedef int (*MadnlpCEvalConstr)(const double*, double *, void*);
+typedef int (*MadnlpCEvalObjGrad)(const double*, double*, void*);
+typedef int (*MadnlpCEvalConstrJac)(const double*, double*, void*);
+typedef int (*MadnlpCEvalLagHess)(double, const double*, const double*, double*, void*);
 
-struct MadnlpCStats {
-  madnlp_int iter;
+enum MadnlpCStatus {
+  MADNLP_SOLVE_SUCCEEDED = 1,
+  MADNLP_SOLVED_TO_ACCEPTABLE_LEVEL = 2,
+  MADNLP_SEARCH_DIRECTION_BECOMES_TOO_SMALL = 3,
+  MADNLP_DIVERGING_ITERATES = 4,
+  MADNLP_INFEASIBLE_PROBLEM_DETECTED = 5,
+  MADNLP_MAXIMUM_ITERATIONS_EXCEEDED = 6,
+  MADNLP_MAXIMUM_WALLTIME_EXCEEDED = 7,
+  MADNLP_INITIAL = 11,
+  MADNLP_REGULAR = 12,
+  MADNLP_RESTORE = 13,
+  MADNLP_ROBUST  = 14,
+  MADNLP_RESTORATION_FAILED = -1,
+  MADNLP_INVALID_NUMBER_DETECTED = -2,
+  MADNLP_ERROR_IN_STEP_COMPUTATION = -3,
+  MADNLP_NOT_ENOUGH_DEGREES_OF_FREEDOM = -4,
+  MADNLP_USER_REQUESTED_STOP = -5,
+  MADNLP_INTERNAL_ERROR = -6,
+  MADNLP_INVALID_NUMBER_OBJECTIVE = -7,
+  MADNLP_INVALID_NUMBER_GRADIENT = -8,
+  MADNLP_INVALID_NUMBER_CONSTRAINTS = -9,
+  MADNLP_INVALID_NUMBER_JACOBIAN = -10,
+  MADNLP_INVALID_NUMBER_HESSIAN_LAGRANGIAN = -11
 };
 
 struct MadnlpCInterface {
@@ -87,19 +108,29 @@ struct MadnlpCNumericOut {
   const double* mul_U;
 };
 
+struct MadnlpCStats {
+  madnlp_int iter;
+  madnlp_int status;
+  double dual_feas;
+  double primal_feas;
+};
+
 MADNLP_SYMBOL_EXPORT struct MadnlpCSolver* madnlp_c_create(struct MadnlpCInterface* nlp_interface);
+
 MADNLP_SYMBOL_EXPORT const struct MadnlpCNumericIn* madnlp_c_input(struct MadnlpCSolver*);
-MADNLP_SYMBOL_EXPORT const struct MadnlpCNumericOut* madnlp_c_output(struct MadnlpCSolver*);
-MADNLP_SYMBOL_EXPORT madnlp_int madnlp_c_solve(struct MadnlpCSolver*);
 
 /* -1 for not found, 0 for double, 1 for int, 2 for bool, 3 for string */
 MADNLP_SYMBOL_EXPORT int madnlp_c_option_type(const char* name);
 MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_double(struct MadnlpCSolver* s, const char* name, double val);
-MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_bool(struct MadnlpCSolver* s, const char* name, int val);
-MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_int(struct MadnlpCSolver* s, const char* name, int val);
+MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_bool(struct MadnlpCSolver* s, const char* name, madnlp_int val);
+MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_int(struct MadnlpCSolver* s, const char* name, madnlp_int val);
 MADNLP_SYMBOL_EXPORT int madnlp_c_set_option_string(struct MadnlpCSolver* s, const char* name, const char* val);
 
+MADNLP_SYMBOL_EXPORT int madnlp_c_solve(struct MadnlpCSolver*);
+
+MADNLP_SYMBOL_EXPORT const struct MadnlpCNumericOut* madnlp_c_output(struct MadnlpCSolver*);
 MADNLP_SYMBOL_EXPORT const struct MadnlpCStats* madnlp_c_get_stats(struct MadnlpCSolver* s);
+
 MADNLP_SYMBOL_EXPORT void madnlp_c_destroy(struct MadnlpCSolver*);
 
 #ifdef __cplusplus
